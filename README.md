@@ -87,7 +87,7 @@ Modern AI tools generate high-quality HTML slides, but making small edits afterw
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourname/deckforge.git
+git clone https://github.com/ShaneLiu04/deckforge.git
 cd deckforge
 
 # Install dependencies
