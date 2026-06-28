@@ -1,0 +1,57 @@
+{
+  "name": "deckforge",
+  "private": false,
+  "version": "0.1.0",
+  "description": "A zero-backend, browser-native visual editor for HTML presentations. Edit AI-generated HTML slides like PowerPoint.",
+  "type": "module",
+  "author": "DeckForge",
+  "license": "MIT",
+  "keywords": [
+    "html-presentation",
+    "presentation-editor",
+    "visual-editor",
+    "ppt",
+    "slides",
+    "react",
+    "vite",
+    "zero-backend",
+    "privacy-first"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourname/deckforge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourname/deckforge/issues"
+  },
+  "homepage": "https://github.com/yourname/deckforge#readme",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.42.0",
+    "jszip": "^3.10.1",
+    "lucide-react": "^1.21.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwind-merge": "^3.6.0",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.1",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "autoprefixer": "^10.5.2",
+    "oxlint": "^1.69.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.0"
+  }
+}

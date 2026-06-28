@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeckForge 示例演示稿</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Microsoft YaHei', sans-serif; background: #0f0f23; color: #e2e8f0; }
+    .slide {
+      width: 960px;
+      height: 540px;
+      margin: 20px auto;
+      padding: 60px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-radius: 16px;
+      border: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .slide h1 { font-size: 48px; margin-bottom: 20px; color: #7c3aed; }
+    .slide h2 { font-size: 32px; margin-bottom: 16px; color: #e2e8f0; }
+    .slide p { font-size: 18px; line-height: 1.6; color: #94a3b8; max-width: 600px; }
+    .slide .icon { font-size: 64px; margin-bottom: 20px; }
+    .slide .btn {
+      display: inline-block;
+      padding: 12px 32px;
+      background: #7c3aed;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+    .slide .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+      margin-top: 20px;
+    }
+    .slide .card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: left;
+    }
+    .slide .card h3 { font-size: 20px; color: #e2e8f0; margin-bottom: 8px; }
+    .slide .card p { font-size: 14px; color: #94a3b8; }
+    .chapter {
+      background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+    }
+    .chapter h1, .chapter p { color: white; }
+  </style>
+</head>
+<body>
+
+  <div class="slide chapter">
+    <div class="icon">🎉</div>
+    <h1>DeckForge 演示工坊</h1>
+    <p>零代码、所见即所得的 HTML 演示稿可视化编辑器</p>
+  </div>
+
+  <div class="slide">
+    <h2>核心特性</h2>
+    <p>拖拽导入 HTML/ZIP/文件夹，自动识别页面结构，在浏览器中像编辑 PPT 一样修改内容</p>
+    <div class="grid">
+      <div class="card">
+        <h3>📁 多格式导入</h3>
+        <p>支持 HTML 文件、ZIP 压缩包、整个文件夹</p>
+      </div>
+      <div class="card">
+        <h3>✏️ 可视化编辑</h3>
+        <p>点击元素即可编辑，实时修改文字、图片、样式</p>
+      </div>
+      <div class="card">
+        <h3>📤 灵活导出</h3>
+        <p>导出 ZIP 包、单 HTML 文件或覆盖保存</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <h2>隐私优先</h2>
+    <p>所有文件处理在浏览器本地完成，不上传任何服务器。你的数据永远属于你。</p>
+    <a href="#" class="btn">开始使用</a>
+  </div>
+
+  <div class="slide">
+    <h2>AI 智能适配</h2>
+    <p>支持 OpenAI、Claude、通义千问、Kimi 等 API，一键优化复杂 HTML 结构</p>
+    <div class="grid">
+      <div class="card">
+        <h3>🤖 转成表格</h3>
+        <p>将复杂结构转换为可编辑表格</p>
+      </div>
+      <div class="card">
+        <h3>✨ 优化排版</h3>
+        <p>智能优化文字排版和间距</p>
+      </div>
+      <div class="card">
+        <h3>📝 提取文字</h3>
+        <p>从复杂元素中提取纯文本</p>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

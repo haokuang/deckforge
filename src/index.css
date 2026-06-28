@@ -1,0 +1,245 @@
+@import "tailwindcss";
+
+@theme {
+  --color-deck-bg: #000000;
+  --color-deck-surface: #1C1C1E;
+  --color-deck-elevated: #2C2C2E;
+  --color-deck-border: rgba(255, 255, 255, 0.08);
+  --color-deck-border-hover: rgba(255, 255, 255, 0.14);
+  --color-deck-accent: #5B8DEF;
+  --color-deck-accent-hover: #6B9DF5;
+  --color-deck-accent2: #3BA55C;
+  --color-deck-warn: #C98A3B;
+  --color-deck-error: #D4554A;
+  --color-deck-text: #FFFFFF;
+  --color-deck-text2: rgba(255, 255, 255, 0.55);
+  --color-deck-text3: rgba(255, 255, 255, 0.32);
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+}
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.08) transparent;
+  }
+
+  *::-webkit-scrollbar { width: 5px; height: 5px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+  *::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+  body {
+    @apply bg-deck-bg text-deck-text font-sans antialiased;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 20% 30%, rgba(91, 141, 239, 0.04) 0%, transparent 55%),
+                radial-gradient(ellipse at 80% 70%, rgba(140, 100, 200, 0.03) 0%, transparent 55%),
+                linear-gradient(180deg, #000000 0%, #08080C 100%);
+    background-attachment: fixed;
+  }
+
+  #root { @apply w-full h-screen; }
+}
+
+@layer components {
+  .deck-glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(48px) saturate(160%);
+    -webkit-backdrop-filter: blur(48px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), inset 0 0.5px 0 rgba(255, 255, 255, 0.12);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  }
+
+  .deck-glass:hover {
+    background: rgba(255, 255, 255, 0.055);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 6px 32px rgba(0, 0, 0, 0.3), inset 0 0.5px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .deck-glass-thin {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(32px) saturate(140%);
+    -webkit-backdrop-filter: blur(32px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
+  }
+
+  .deck-glass-thin:hover {
+    background: rgba(255, 255, 255, 0.045);
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+
+  .deck-glass-thick {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(64px) saturate(180%);
+    -webkit-backdrop-filter: blur(64px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), inset 0 0.5px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .deck-topbar {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(32px) saturate(140%);
+    -webkit-backdrop-filter: blur(32px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-radius: 0 0 16px 16px;
+    box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .deck-btn {
+    @apply relative px-5 py-2.5 rounded-2xl text-[14px] font-semibold transition-all duration-300;
+    background: linear-gradient(145deg, var(--color-deck-accent), #7A9AE8);
+    color: white;
+    box-shadow: 0 2px 12px rgba(91, 141, 239, 0.25), inset 0 1px 0 rgba(255,255,255,0.2);
+    border: none;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+  }
+
+  .deck-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(91, 141, 239, 0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    background: linear-gradient(145deg, var(--color-deck-accent-hover), #8AAAF0);
+  }
+
+  .deck-btn:active { transform: translateY(0) scale(0.98); }
+  .deck-btn:focus-visible { @apply outline-none ring-2 ring-deck-accent/50 ring-offset-2 ring-offset-black; }
+
+  .deck-btn-glass {
+    @apply relative px-5 py-2.5 rounded-2xl text-[14px] font-semibold transition-all duration-300;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    color: white;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+  }
+
+  .deck-btn-glass:hover {
+    background: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
+  }
+
+  .deck-btn-glass:active { transform: translateY(0) scale(0.98); }
+  .deck-btn-glass:focus-visible { @apply outline-none ring-2 ring-deck-accent/50 ring-offset-2 ring-offset-black; }
+
+  .deck-btn-ghost {
+    @apply px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all duration-200;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.50);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
+    cursor: pointer;
+  }
+
+  .deck-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .deck-btn-ghost:active { transform: scale(0.97); }
+  .deck-btn-ghost:focus-visible { @apply outline-none ring-2 ring-deck-accent/50 ring-offset-2 ring-offset-black; }
+
+  .deck-btn-ghost-active {
+    background: rgba(91, 141, 239, 0.12) !important;
+    border-color: rgba(91, 141, 239, 0.35) !important;
+    color: var(--color-deck-accent) !important;
+  }
+
+  .deck-chip {
+    @apply px-2.5 py-1.5 rounded-xl text-[11px] font-medium transition-all duration-200;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.55);
+    cursor: pointer;
+  }
+
+  .deck-chip:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  .deck-chip-active {
+    background: rgba(91, 141, 239, 0.14);
+    border-color: rgba(91, 141, 239, 0.40);
+    color: var(--color-deck-accent);
+  }
+
+  .deck-chip:focus-visible { @apply outline-none ring-2 ring-deck-accent/50 ring-offset-2 ring-offset-black; }
+
+  .deck-input {
+    @apply px-4 py-2 rounded-2xl text-[14px] transition-all duration-300;
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(16px) saturate(120%);
+    -webkit-backdrop-filter: blur(16px) saturate(120%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: white;
+    outline: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    letter-spacing: -0.01em;
+  }
+
+  .deck-input:focus {
+    border-color: rgba(91, 141, 239, 0.4);
+    box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.08), inset 0 1px 0 rgba(255,255,255,0.06);
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .deck-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+
+  .deck-label {
+    @apply text-[10px] font-medium uppercase tracking-wider;
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: 0.06em;
+  }
+
+  .deck-divider {
+    @apply h-px my-3;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  }
+
+  .deck-divider-v {
+    @apply w-px h-4 mx-1;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .deck-scroll { @apply overflow-y-auto overflow-x-hidden; }
+}
+
+@layer utilities {
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .anim-fade-in-up { animation: fade-in-up 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
+  .anim-scale-in { animation: scale-in 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
+  .anim-fade-in { animation: fade-in 0.3s cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
+
+  .text-balance { text-wrap: balance; }
+}
