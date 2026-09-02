@@ -42,7 +42,7 @@ export function ChipGroup({ options, value, onChange, multiple, size = 'sm', cla
               ${size === 'sm' ? 'px-2 py-1 text-[11px] rounded-lg' : 'px-2.5 py-1.5 text-[12px] rounded-xl'}
               ${selected
                 ? 'bg-deck-accent/15 text-deck-accent border border-deck-accent/40'
-                : 'bg-white/[0.05] text-deck-text2 border border-white/[0.08] hover:bg-white/[0.09] hover:text-deck-text hover:border-white/[0.12]'
+                : 'bg-deck-fill text-deck-text2 border border-deck-border hover:bg-deck-fill-hover hover:text-deck-text hover:border-deck-border-hover'
               }
             `}
           >

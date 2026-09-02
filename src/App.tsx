@@ -1,3 +1,4 @@
+import { useLayoutEffect } from 'react'
 import { useStore } from './store'
 import { TopBar } from './components/layout/TopBar'
 import { LeftPanel } from './components/layout/LeftPanel'
@@ -10,6 +11,11 @@ import { RepositoryModal } from './components/ui/RepositoryModal'
 
 function App() {
   const hasImported = useStore((s) => s.hasImported)
+  const theme = useStore((s) => s.theme)
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden anim-fade-in">

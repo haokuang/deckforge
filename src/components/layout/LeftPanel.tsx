@@ -42,20 +42,20 @@ export function LeftPanel() {
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deck-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black
                   ${selected
                     ? 'bg-deck-accent/10 text-deck-text'
-                    : 'text-deck-text2 hover:bg-white/[0.05] hover:text-deck-text'
+                    : 'text-deck-text2 hover:bg-deck-fill hover:text-deck-text'
                   }
                 `}
               >
                 {selected && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-deck-accent" />}
                 <span className={`
                   w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-medium shrink-0
-                  ${selected ? 'bg-deck-accent/20 text-deck-accent' : 'bg-white/[0.05] text-deck-text3'}
+                  ${selected ? 'bg-deck-accent/20 text-deck-accent' : 'bg-deck-fill text-deck-text3'}
                 `}>
                   {idx + 1}
                 </span>
                 <span className="truncate text-left flex-1">{page.title || `页面 ${idx + 1}`}</span>
                 {page.type !== 'unknown' && (
-                  <span className="ml-auto px-1.5 py-0.5 rounded-md text-[9px] bg-white/[0.06] text-deck-text3 shrink-0">{page.type}</span>
+                  <span className="ml-auto px-1.5 py-0.5 rounded-md text-[9px] bg-deck-fill text-deck-text3 shrink-0">{page.type}</span>
                 )}
               </button>
             );

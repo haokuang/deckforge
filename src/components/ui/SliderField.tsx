@@ -36,11 +36,11 @@ export function SliderField({
         onChange={(e) => onChange(Number(e.target.value))}
         className="
           w-full h-1.5 rounded-full appearance-none cursor-pointer
-          bg-white/10 accent-deck-accent
+          bg-deck-fill-hover accent-deck-accent
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deck-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black
         "
         style={{
-          backgroundImage: `linear-gradient(to right, var(--color-deck-accent) 0%, var(--color-deck-accent) ${((value - min) / (max - min)) * 100}%, rgba(255,255,255,0.1) ${((value - min) / (max - min)) * 100}%, rgba(255,255,255,0.1) 100%)`,
+          backgroundImage: `linear-gradient(to right, var(--color-deck-accent) 0%, var(--color-deck-accent) ${((value - min) / (max - min)) * 100}%, var(--color-deck-fill-hover) ${((value - min) / (max - min)) * 100}%, var(--color-deck-fill-hover) 100%)`,
         }}
         aria-valuemin={min}
         aria-valuemax={max}

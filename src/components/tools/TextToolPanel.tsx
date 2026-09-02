@@ -163,7 +163,7 @@ export function TextToolPanel() {
                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deck-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black
                       ${item.active
                         ? 'bg-deck-accent/15 text-deck-accent border border-deck-accent/40'
-                        : 'bg-white/[0.05] text-deck-text3 border border-white/[0.08] hover:bg-white/[0.09] hover:text-deck-text'
+                        : 'bg-deck-fill text-deck-text3 border border-deck-border hover:bg-deck-fill-hover hover:text-deck-text'
                       }
                     `}
                   >

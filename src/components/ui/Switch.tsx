@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useId } from 'react';
 
 interface SwitchProps {
   checked: boolean;
@@ -10,15 +10,8 @@ interface SwitchProps {
 }
 
 export function Switch({ checked, onChange, label, id, disabled, className = '' }: SwitchProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const switchId = id || `deck-switch-${Math.random().toString(36).slice(2, 9)}`;
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      if (!disabled) onChange(!checked);
-    }
-  }, [checked, disabled, onChange]);
+  const generatedId = useId();
+  const switchId = id || `deck-switch-${generatedId}`;
 
   return (
     <label
@@ -26,25 +19,21 @@ export function Switch({ checked, onChange, label, id, disabled, className = '' 
       className={`inline-flex items-center gap-2.5 cursor-pointer ${disabled ? 'opacity-40 cursor-not-allowed' : ''} ${className}`}
     >
       <input
-        ref={inputRef}
         id={switchId}
         type="checkbox"
+        role="switch"
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
-        className="sr-only"
+        className="sr-only peer"
       />
       <span
-        role="switch"
-        aria-checked={checked}
-        tabIndex={disabled ? -1 : 0}
-        onKeyDown={handleKeyDown}
-        onClick={() => { if (!disabled) inputRef.current?.click(); }}
+        aria-hidden="true"
         className={`
           relative inline-flex items-center w-11 h-6 rounded-full
           transition-colors duration-300 ease-out
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deck-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black
-          ${checked ? 'bg-deck-accent' : 'bg-white/10'}
+          peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-deck-accent/50
+          ${checked ? 'bg-deck-accent' : 'bg-deck-border-hover'}
         `}
       >
         <span

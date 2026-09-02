@@ -110,7 +110,7 @@ export function AiToolPanel() {
             <span className="text-xs font-medium text-deck-accent">适配结果</span>
             <IconButton icon={Copy} title="复制结果" onClick={() => navigator.clipboard.writeText(result)} size="sm" />
           </div>
-          <pre className="text-[10px] text-deck-text3 bg-black/30 p-2 rounded-xl overflow-auto max-h-40 font-mono">{result}</pre>
+          <pre className="text-[10px] text-deck-text3 bg-deck-fill p-2 rounded-xl overflow-auto max-h-40 font-mono">{result}</pre>
           <div className="flex gap-2 mt-3">
             <button onClick={handleApply} className="deck-btn flex-1 flex items-center justify-center gap-1 py-2">
               <Check className="w-3.5 h-3.5" /><span>应用</span>

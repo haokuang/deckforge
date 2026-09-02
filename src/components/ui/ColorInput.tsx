@@ -102,7 +102,7 @@ export function ColorInput({ value, onChange, label, allowTransparent = true, cl
               className={`
                 w-7 h-7 rounded-lg border-2 transition-all duration-150
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deck-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black
-                ${active ? 'border-deck-accent scale-110 shadow-[0_0_8px_rgba(91,141,239,0.4)]' : 'border-transparent hover:scale-105 hover:border-white/30'}
+                ${active ? 'border-deck-accent scale-110 shadow-[0_0_8px_rgba(91,141,239,0.4)]' : 'border-transparent hover:scale-105 hover:border-deck-border-hover'}
               `}
               style={{ backgroundColor: color }}
             />
@@ -112,10 +112,10 @@ export function ColorInput({ value, onChange, label, allowTransparent = true, cl
         {/* 自定义颜色 */}
         <label
           className="
-            w-7 h-7 rounded-lg border border-white/10 overflow-hidden cursor-pointer
+            w-7 h-7 rounded-lg border border-deck-border overflow-hidden cursor-pointer
             flex items-center justify-center transition-all duration-200
             focus-within:ring-2 focus-within:ring-deck-accent/50 focus-within:ring-offset-2 focus-within:ring-offset-black
-            hover:border-white/25 hover:bg-white/[0.05] relative
+            hover:border-deck-border-hover hover:bg-deck-fill relative
           "
           title="自定义颜色"
         >
@@ -139,7 +139,7 @@ export function ColorInput({ value, onChange, label, allowTransparent = true, cl
             className={`
               w-7 h-7 rounded-lg border-2 text-[9px] font-medium transition-all duration-200
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deck-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black
-              ${isTransparent ? 'border-deck-accent text-deck-accent' : 'border-transparent text-deck-text3 hover:border-white/25'}
+              ${isTransparent ? 'border-deck-accent text-deck-accent' : 'border-transparent text-deck-text3 hover:border-deck-border-hover'}
             `}
             style={{
               background: isTransparent
@@ -155,7 +155,7 @@ export function ColorInput({ value, onChange, label, allowTransparent = true, cl
       {/* Hex 输入 */}
       <div className="flex items-center gap-2">
         <div
-          className="w-6 h-6 rounded-md border border-white/10 shrink-0"
+          className="w-6 h-6 rounded-md border border-deck-border shrink-0"
           style={{ background: isTransparent ? 'repeating-conic-gradient(#333 0% 25%, #555 0% 50%) 50% / 8px 8px' : normalizedValue }}
         />
         <input

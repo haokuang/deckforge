@@ -101,6 +101,8 @@ export interface RepositoryState {
   lastCommitUrl?: string;
 }
 
+export type ThemeMode = 'dark' | 'light';
+
 /** 导入状态 */
 export interface ImportState {
   isImporting: boolean;
@@ -156,6 +158,7 @@ export interface AppState {
   leftPanelCollapsed: boolean;
   rightPanelCollapsed: boolean;
   showSettings: boolean;
+  theme: ThemeMode;
 
   // GitHub PPT 仓库
   repository: RepositoryState;

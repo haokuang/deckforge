@@ -140,7 +140,7 @@ export function PreviewArea() {
     <div className="flex-1 flex flex-col overflow-hidden relative">
       <div ref={containerRef} className="flex-1 flex items-center justify-center p-4 overflow-auto">
         <div className="relative transition-transform duration-300 origin-center" style={{ transform: `scale(${zoom / 100})` }}>
-          <iframe ref={iframeRef} className="rounded-2xl shadow-2xl border border-white/10 bg-black" style={{ width: iframeSize.width, height: iframeSize.height, minWidth: iframeSize.width, minHeight: iframeSize.height }} sandbox="allow-scripts allow-same-origin" title="preview" />
+          <iframe ref={iframeRef} className="rounded-2xl shadow-2xl border border-deck-border bg-deck-preview" style={{ width: iframeSize.width, height: iframeSize.height, minWidth: iframeSize.width, minHeight: iframeSize.height }} sandbox="allow-scripts allow-same-origin" title="preview" />
         </div>
       </div>
       <div className="h-7 flex items-center px-4 deck-glass-thin rounded-none border-x-0 border-b-0 text-[10px] text-deck-text3 shrink-0" style={{ borderRadius: '20px 20px 0 0' }}>

@@ -64,7 +64,7 @@ export function RightPanel() {
         </div>
       ) : (
         <>
-          <div className="px-3 py-2 mb-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+          <div className="px-3 py-2 mb-2 rounded-xl bg-deck-fill border border-deck-border">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded-lg bg-deck-accent/15 text-deck-accent text-[10px] font-mono font-medium">{selectedElement.tagName.toLowerCase()}</span>
               <span className="text-[10px] text-deck-text3 truncate flex-1" title={selectedElement.selector}>{selectedElement.selector}</span>
@@ -86,7 +86,7 @@ export function RightPanel() {
             </div>
           </div>
 
-          <div className="flex rounded-xl border border-white/[0.06] bg-white/[0.03] p-0.5 mb-2 overflow-hidden">
+          <div className="flex rounded-xl border border-deck-border bg-deck-fill p-0.5 mb-2 overflow-hidden">
             {TOOL_TABS.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -101,7 +101,7 @@ export function RightPanel() {
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deck-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black
                     ${active
                       ? 'bg-deck-accent/15 text-deck-accent'
-                      : 'text-deck-text3 hover:text-deck-text hover:bg-white/[0.04]'
+                      : 'text-deck-text3 hover:text-deck-text hover:bg-deck-fill-hover'
                     }
                   `}
                 >

@@ -58,6 +58,7 @@ Modern AI tools generate high-quality HTML slides, but making small edits afterw
 | **Undo / Redo** | Full history stack for style and content changes. |
 | **Privacy First** | Local imports stay in the browser; repository saves go directly to the GitHub API. |
 | **Versioned Save** | Open HTML decks from a bound GitHub repository, save to the original path, and create a commit automatically. |
+| **Light & Dark Themes** | Switch between the original dark workspace and an ivory light theme; the preference is remembered locally. |
 
 ---
 

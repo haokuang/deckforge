@@ -14,7 +14,33 @@
   --color-deck-text: #FFFFFF;
   --color-deck-text2: rgba(255, 255, 255, 0.55);
   --color-deck-text3: rgba(255, 255, 255, 0.32);
+  --color-deck-fill: rgba(255, 255, 255, 0.05);
+  --color-deck-fill-hover: rgba(255, 255, 255, 0.09);
+  --color-deck-overlay: rgba(0, 0, 0, 0.60);
+  --color-deck-preview: #000000;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-deck-bg: #F9F7F4;
+  --color-deck-surface: #FFFFFF;
+  --color-deck-elevated: #F5F1EC;
+  --color-deck-border: rgba(28, 31, 31, 0.12);
+  --color-deck-border-hover: rgba(28, 31, 31, 0.20);
+  --color-deck-accent: #4774CC;
+  --color-deck-accent-hover: #3765BE;
+  --color-deck-text: #1C1F1F;
+  --color-deck-text2: rgba(28, 31, 31, 0.64);
+  --color-deck-text3: rgba(28, 31, 31, 0.42);
+  --color-deck-fill: rgba(28, 31, 31, 0.05);
+  --color-deck-fill-hover: rgba(28, 31, 31, 0.09);
+  --color-deck-overlay: rgba(28, 31, 31, 0.28);
+  --color-deck-preview: #E9E7E3;
 }
 
 @layer base {
@@ -36,6 +62,19 @@
                 linear-gradient(180deg, #000000 0%, #08080C 100%);
     background-attachment: fixed;
   }
+
+  :root[data-theme='light'] body {
+    background: radial-gradient(ellipse at 20% 25%, rgba(71, 116, 204, 0.08) 0%, transparent 52%),
+                radial-gradient(ellipse at 82% 72%, rgba(181, 156, 126, 0.07) 0%, transparent 50%),
+                linear-gradient(180deg, #F9F7F4 0%, #F5F1EC 100%);
+  }
+
+  :root[data-theme='light'] * {
+    scrollbar-color: rgba(28, 31, 31, 0.16) transparent;
+  }
+
+  :root[data-theme='light'] *::-webkit-scrollbar-thumb { background: rgba(28, 31, 31, 0.14); }
+  :root[data-theme='light'] *::-webkit-scrollbar-thumb:hover { background: rgba(28, 31, 31, 0.24); }
 
   #root { @apply w-full h-screen; }
 }
@@ -219,6 +258,76 @@
   }
 
   .deck-scroll { @apply overflow-y-auto overflow-x-hidden; }
+
+  :root[data-theme='light'] .deck-glass {
+    background: rgba(255, 255, 255, 0.74);
+    border-color: rgba(28, 31, 31, 0.11);
+    box-shadow: 0 4px 22px rgba(73, 63, 50, 0.08), inset 0 0.5px 0 rgba(255, 255, 255, 0.92);
+  }
+
+  :root[data-theme='light'] .deck-glass:hover {
+    background: rgba(255, 255, 255, 0.88);
+    border-color: rgba(28, 31, 31, 0.17);
+    box-shadow: 0 7px 28px rgba(73, 63, 50, 0.11), inset 0 0.5px 0 #FFFFFF;
+  }
+
+  :root[data-theme='light'] .deck-glass-thin {
+    background: rgba(255, 255, 255, 0.68);
+    border-color: rgba(28, 31, 31, 0.10);
+    box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.96), 0 2px 14px rgba(73, 63, 50, 0.05);
+  }
+
+  :root[data-theme='light'] .deck-glass-thin:hover {
+    background: rgba(255, 255, 255, 0.82);
+    border-color: rgba(28, 31, 31, 0.15);
+  }
+
+  :root[data-theme='light'] .deck-glass-thick {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(28, 31, 31, 0.13);
+    box-shadow: 0 20px 60px rgba(73, 63, 50, 0.18), inset 0 0.5px 0 #FFFFFF;
+  }
+
+  :root[data-theme='light'] .deck-topbar {
+    background: rgba(255, 255, 255, 0.78);
+    border-color: rgba(28, 31, 31, 0.10);
+    box-shadow: inset 0 0.5px 0 #FFFFFF, 0 3px 18px rgba(73, 63, 50, 0.06);
+  }
+
+  :root[data-theme='light'] .deck-btn-glass,
+  :root[data-theme='light'] .deck-btn-ghost,
+  :root[data-theme='light'] .deck-chip,
+  :root[data-theme='light'] .deck-input {
+    background: var(--color-deck-fill);
+    border-color: var(--color-deck-border);
+    color: var(--color-deck-text2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.80);
+  }
+
+  :root[data-theme='light'] .deck-btn-glass:hover,
+  :root[data-theme='light'] .deck-btn-ghost:hover,
+  :root[data-theme='light'] .deck-chip:hover {
+    background: var(--color-deck-fill-hover);
+    border-color: var(--color-deck-border-hover);
+    color: var(--color-deck-text);
+  }
+
+  :root[data-theme='light'] .deck-input {
+    color: var(--color-deck-text);
+  }
+
+  :root[data-theme='light'] .deck-input:focus {
+    background: rgba(255, 255, 255, 0.82);
+  }
+
+  :root[data-theme='light'] .deck-input::placeholder,
+  :root[data-theme='light'] .deck-label {
+    color: var(--color-deck-text3);
+  }
+
+  :root[data-theme='light'] .deck-divider-v {
+    background: var(--color-deck-border);
+  }
 }
 
 @layer utilities {

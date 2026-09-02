@@ -72,7 +72,7 @@ export function SettingsModal() {
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-xl transition-opacity duration-300" onClick={() => setShowSettings(false)} />
+      <div className="absolute inset-0 bg-deck-overlay backdrop-blur-xl transition-opacity duration-300" onClick={() => setShowSettings(false)} />
 
       <div
         ref={modalRef}
@@ -84,14 +84,14 @@ export function SettingsModal() {
         <div className="absolute -top-px left-6 right-6 h-px bg-gradient-to-r from-transparent via-deck-accent/50 to-transparent" />
 
         <div className="deck-glass-thick p-0 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-deck-border">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-deck-accent/20 to-deck-accent/5 flex items-center justify-center border border-deck-accent/15">
                 <Settings className="w-[18px] h-[18px] text-deck-accent" />
               </div>
               <div>
-                <h2 id="settings-title" className="text-[15px] font-semibold text-white tracking-tight">设置</h2>
-                <p className="text-[11px] text-white/30 mt-0.5">配置 AI 智能适配与连接参数</p>
+                <h2 id="settings-title" className="text-[15px] font-semibold text-deck-text tracking-tight">设置</h2>
+                <p className="text-[11px] text-deck-text3 mt-0.5">配置 AI 智能适配与连接参数</p>
               </div>
             </div>
             <IconButton icon={X} title="关闭" onClick={() => setShowSettings(false)} />
@@ -101,12 +101,12 @@ export function SettingsModal() {
             <div className="deck-glass-thin p-4 rounded-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${localSettings.enabled ? 'bg-deck-accent/15 border-deck-accent/20' : 'bg-white/5 border-white/8'} border`}>
-                    <Sparkles className={`w-[18px] h-[18px] transition-colors duration-300 ${localSettings.enabled ? 'text-deck-accent' : 'text-white/25'}`} />
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${localSettings.enabled ? 'bg-deck-accent/15 border-deck-accent/20' : 'bg-deck-fill border-deck-border'} border`}>
+                    <Sparkles className={`w-[18px] h-[18px] transition-colors duration-300 ${localSettings.enabled ? 'text-deck-accent' : 'text-deck-text3'}`} />
                   </div>
                   <div>
-                    <span className="text-[13px] font-medium text-white/90 block">启用 AI 智能适配</span>
-                    <span className="text-[11px] text-white/30 block mt-0.5">选中元素后可调用 AI 进行智能转换</span>
+                    <span className="text-[13px] font-medium text-deck-text block">启用 AI 智能适配</span>
+                    <span className="text-[11px] text-deck-text3 block mt-0.5">选中元素后可调用 AI 进行智能转换</span>
                   </div>
                 </div>
                 <Switch
@@ -118,8 +118,8 @@ export function SettingsModal() {
 
             <div className={`space-y-3 transition-all duration-300 ${localSettings.enabled ? 'opacity-100 pointer-events-auto' : 'opacity-35 pointer-events-none'}`}>
               <div className="flex items-center gap-2 px-1">
-                <Server className="w-3.5 h-3.5 text-white/25" />
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30">连接配置</span>
+                <Server className="w-3.5 h-3.5 text-deck-text3" />
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-deck-text3">连接配置</span>
               </div>
 
               <div className="deck-glass-thin p-4 rounded-2xl space-y-4">
@@ -136,7 +136,7 @@ export function SettingsModal() {
                         <option key={p.value} value={p.value}>{p.label}</option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" />
+                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-deck-text3 pointer-events-none" />
                   </div>
                 </div>
 
@@ -151,7 +151,7 @@ export function SettingsModal() {
                     placeholder="例如 gpt-4o"
                   />
                   {provider && provider.value !== 'custom' && (
-                    <p className="text-[10px] text-white/20 mt-1.5">默认: {provider.defaultModel}</p>
+                    <p className="text-[10px] text-deck-text3 mt-1.5">默认: {provider.defaultModel}</p>
                   )}
                 </div>
 
@@ -173,14 +173,14 @@ export function SettingsModal() {
 
             <div className={`space-y-3 transition-all duration-300 ${localSettings.enabled ? 'opacity-100 pointer-events-auto' : 'opacity-35 pointer-events-none'}`}>
               <div className="flex items-center gap-2 px-1">
-                <Shield className="w-3.5 h-3.5 text-white/25" />
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30">安全认证</span>
+                <Shield className="w-3.5 h-3.5 text-deck-text3" />
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-deck-text3">安全认证</span>
               </div>
 
               <div className="deck-glass-thin p-4 rounded-2xl">
                 <label className="deck-label mb-2.5 block">API Key</label>
                 <div className="relative">
-                  <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                  <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-deck-text3" />
                   <input
                     type={showKey ? 'text' : 'password'}
                     value={localSettings.apiKey}
@@ -192,7 +192,7 @@ export function SettingsModal() {
                   <button
                     type="button"
                     onClick={() => setShowKey((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-deck-text3 hover:text-deck-text2 transition-colors"
                     aria-label={showKey ? '隐藏 API Key' : '显示 API Key'}
                     title={showKey ? '隐藏' : '显示'}
                   >
@@ -203,13 +203,13 @@ export function SettingsModal() {
                   <div className="w-4 h-4 rounded flex items-center justify-center bg-deck-accent2/10 mt-0.5 shrink-0">
                     <Bot className="w-2.5 h-2.5 text-deck-accent2" />
                   </div>
-                  <p className="text-[11px] text-white/25 leading-relaxed">API Key 仅存储在本地浏览器中，不会发送到任何第三方服务器。所有 AI 请求直接从您的浏览器发出。</p>
+                  <p className="text-[11px] text-deck-text3 leading-relaxed">API Key 仅存储在本地浏览器中，不会发送到任何第三方服务器。所有 AI 请求直接从您的浏览器发出。</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-white/[0.06]">
+          <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-deck-border">
             <button
               onClick={() => setShowSettings(false)}
               className="deck-btn-ghost px-5 py-2.5 text-[13px]"

@@ -39,7 +39,7 @@ export function RepositoryModal() {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <button
-        className="absolute inset-0 bg-black/60 backdrop-blur-xl"
+        className="absolute inset-0 bg-deck-overlay backdrop-blur-xl"
         onClick={() => setShowRepositoryModal(false)}
         aria-label="关闭 GitHub 仓库"
       />
@@ -50,7 +50,7 @@ export function RepositoryModal() {
         aria-modal="true"
         aria-labelledby="repository-title"
       >
-        <header className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
+        <header className="flex items-center justify-between px-6 py-5 border-b border-deck-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-deck-accent/15 border border-deck-accent/20 flex items-center justify-center">
               <GitFork className="w-5 h-5 text-deck-accent" />
@@ -79,7 +79,7 @@ export function RepositoryModal() {
               <label className="col-span-2">
                 <span className="deck-label mb-2 block">GitHub 仓库</span>
                 <div className="relative">
-                  <GitFork className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+                  <GitFork className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-deck-text3" />
                   <input
                     value={repositoryName}
                     onChange={(event) => setRepositoryName(event.target.value)}
@@ -114,7 +114,7 @@ export function RepositoryModal() {
               <label className="col-span-2">
                 <span className="deck-label mb-2 block">GitHub Token</span>
                 <div className="relative">
-                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-deck-text3" />
                   <input
                     type="password"
                     value={token}
@@ -147,7 +147,7 @@ export function RepositoryModal() {
                   <span className="text-[13px] font-medium truncate">
                     {repository.binding.owner}/{repository.binding.repo}
                   </span>
-                  <span className="px-2 py-0.5 rounded-lg bg-white/[0.06] text-[10px] text-deck-text3">
+                  <span className="px-2 py-0.5 rounded-lg bg-deck-fill text-[10px] text-deck-text3">
                     {repository.binding.branch}
                   </span>
                 </div>
@@ -162,7 +162,7 @@ export function RepositoryModal() {
             </div>
 
             <div className="deck-glass-thin rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
+              <div className="px-4 py-3 border-b border-deck-border flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-deck-text2">
                   HTML 演示稿 ({repository.files.length})
                 </span>
@@ -183,7 +183,7 @@ export function RepositoryModal() {
                       onClick={() => void openRepositoryFile(file)}
                       disabled={repository.isLoading}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors ${
-                        isCurrent ? 'bg-deck-accent/12 text-white' : 'hover:bg-white/[0.05] text-deck-text2'
+                        isCurrent ? 'bg-deck-accent/12 text-deck-text' : 'hover:bg-deck-fill text-deck-text2'
                       }`}
                     >
                       <FileCode2 className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-deck-accent' : 'text-deck-text3'}`} />

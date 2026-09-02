@@ -35,7 +35,7 @@ export function IconButton({
         ${size === 'sm' ? 'w-7 h-7' : 'w-8 h-8'}
         ${active
           ? 'bg-deck-accent/15 text-deck-accent border border-deck-accent/35'
-          : 'bg-white/[0.04] text-deck-text2 border border-white/[0.06] hover:bg-white/[0.08] hover:text-deck-text hover:border-white/[0.10]'
+          : 'bg-deck-fill text-deck-text2 border border-deck-border hover:bg-deck-fill-hover hover:text-deck-text hover:border-deck-border-hover'
         }
         ${className}
       `}

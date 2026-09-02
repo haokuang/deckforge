@@ -4,6 +4,7 @@ import type {
   FileNode, PageInfo, EditAction, SelectedElementInfo,
   AIAdapterSettings, ImportState, ToastMessage, AppState,
   RepositoryHtmlFile,
+  ThemeMode,
 } from '../types';
 import { parseZip, buildFileTreeFromFiles, readFileAsText, readFileAsBuffer, createZip } from '../utils/zip';
 import { supportsFileSystemAccess, pickDirectory, readDirectoryRecursively, downloadBlob } from '../utils/fileAccess';
@@ -40,6 +41,7 @@ interface AppStore extends AppState {
   toggleRightPanel: () => void;
   setAISettings: (settings: Partial<AIAdapterSettings>) => void;
   setShowSettings: (show: boolean) => void;
+  setTheme: (theme: ThemeMode) => void;
   setShowRepositoryModal: (show: boolean) => void;
   connectRepository: (input: RepositoryConnectionInput) => Promise<boolean>;
   refreshRepositoryFiles: () => Promise<void>;
@@ -83,6 +85,7 @@ const initialState: AppState = {
   leftPanelCollapsed: false,
   rightPanelCollapsed: false,
   showSettings: false,
+  theme: getInitialTheme(),
   repository: {
     binding: null,
     files: [],
@@ -460,6 +463,16 @@ export const useStore = create<AppStore>((set, get) => ({
     set({ showSettings: show });
   },
 
+  setTheme: (theme) => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem('deckforge-theme', theme);
+    } catch {
+      // 隐私模式禁用本地存储时，主题仍在当前页面内生效。
+    }
+    set({ theme });
+  },
+
   setShowRepositoryModal: (show) => {
     set({ showRepositoryModal: show });
   },
@@ -689,6 +702,15 @@ export const useStore = create<AppStore>((set, get) => ({
     });
   },
 }));
+
+function getInitialTheme(): ThemeMode {
+  if (typeof window === 'undefined') return 'dark';
+  try {
+    return localStorage.getItem('deckforge-theme') === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
 
 /** 从预览 iframe 获取已经应用全部编辑的、可持久化 HTML。 */
 function requestIframeHtml(iframeWindow: Window): Promise<string> {

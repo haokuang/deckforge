@@ -89,14 +89,14 @@ export function LayoutToolPanel() {
             <button
               type="button"
               onClick={() => setStep(1)}
-              className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${step === 1 ? 'bg-deck-accent/20 text-deck-accent' : 'bg-white/[0.05] text-deck-text3 hover:bg-white/[0.08]'}`}
+              className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${step === 1 ? 'bg-deck-accent/20 text-deck-accent' : 'bg-deck-fill text-deck-text3 hover:bg-deck-fill-hover'}`}
             >
               1px
             </button>
             <button
               type="button"
               onClick={() => setStep(10)}
-              className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${step === 10 ? 'bg-deck-accent/20 text-deck-accent' : 'bg-white/[0.05] text-deck-text3 hover:bg-white/[0.08]'}`}
+              className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${step === 10 ? 'bg-deck-accent/20 text-deck-accent' : 'bg-deck-fill text-deck-text3 hover:bg-deck-fill-hover'}`}
             >
               10px
             </button>

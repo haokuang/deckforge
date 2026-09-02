@@ -1,12 +1,12 @@
 import { useRef, useCallback } from 'react';
-import { Upload, Save, RotateCcw, Undo2, Redo2, Edit3, Eye, Settings, Plus, Minus, FileArchive, FileCode, Layers, Paintbrush, GitFork } from 'lucide-react';
+import { Upload, Save, RotateCcw, Undo2, Redo2, Edit3, Eye, Settings, Plus, Minus, FileArchive, FileCode, Layers, Paintbrush, GitFork, Moon, Sun } from 'lucide-react';
 import { useStore } from '../../store';
 import { APP_NAME, APP_NAME_CN } from '../../utils/constants';
 import { IconButton } from '../ui/IconButton';
 
 export function TopBar() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { hasImported, isEditMode, zoom, undoStack, redoStack, selectedElement, formatPainterSource, formatPainterActive, formatPainterSticky, repository, setEditMode, setZoom, undo, redo, restoreOriginal, exportZip, exportSingleHtml, saveToFile, setShowSettings, setShowRepositoryModal, addToast, copyFormatPainter, toggleFormatPainter, setFormatPainterSticky } = useStore();
+  const { hasImported, isEditMode, zoom, undoStack, redoStack, selectedElement, formatPainterSource, formatPainterActive, formatPainterSticky, repository, theme, setEditMode, setZoom, undo, redo, restoreOriginal, exportZip, exportSingleHtml, saveToFile, setShowSettings, setShowRepositoryModal, setTheme, addToast, copyFormatPainter, toggleFormatPainter, setFormatPainterSticky } = useStore();
 
   const handleImportClick = useCallback(() => { fileInputRef.current?.click(); }, []);
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,6 +121,11 @@ export function TopBar() {
         )}
 
         <div className="flex items-center gap-1 ml-auto">
+          <IconButton
+            icon={theme === 'dark' ? Sun : Moon}
+            title={theme === 'dark' ? '切换到浅色界面' : '切换到深色界面'}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          />
           <IconButton icon={Settings} title="设置" onClick={() => setShowSettings(true)} />
         </div>
       </div>
