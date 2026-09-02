@@ -6,6 +6,7 @@ import { RightPanel } from './components/layout/RightPanel'
 import { FileDropZone } from './components/importer/FileDropZone'
 import { ToastContainer } from './components/ui/ToastContainer'
 import { SettingsModal } from './components/ui/SettingsModal'
+import { RepositoryModal } from './components/ui/RepositoryModal'
 
 function App() {
   const hasImported = useStore((s) => s.hasImported)
@@ -28,6 +29,7 @@ function App() {
 
       <ToastContainer />
       <SettingsModal />
+      <RepositoryModal />
     </div>
   )
 }

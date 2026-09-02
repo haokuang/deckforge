@@ -2,12 +2,20 @@
 import { create } from 'zustand';
 import type {
   FileNode, PageInfo, EditAction, SelectedElementInfo,
-  AIAdapterSettings, ImportState, ToastMessage, AppState
+  AIAdapterSettings, ImportState, ToastMessage, AppState,
+  RepositoryHtmlFile,
 } from '../types';
 import { parseZip, buildFileTreeFromFiles, readFileAsText, readFileAsBuffer, createZip } from '../utils/zip';
 import { supportsFileSystemAccess, pickDirectory, readDirectoryRecursively, downloadBlob } from '../utils/fileAccess';
 import { inlineResources } from '../utils/dom';
 import { SLIDE_SELECTORS, FORMAT_PAINTER_PROPERTIES } from '../utils/constants';
+import {
+  connectGitHubRepository,
+  listRepositoryHtmlFiles,
+  loadRepositoryHtml,
+  saveRepositoryHtml,
+  type RepositoryConnectionInput,
+} from '../utils/github';
 
 interface AppStore extends AppState {
   importFiles: (files: FileList) => Promise<void>;
@@ -32,6 +40,11 @@ interface AppStore extends AppState {
   toggleRightPanel: () => void;
   setAISettings: (settings: Partial<AIAdapterSettings>) => void;
   setShowSettings: (show: boolean) => void;
+  setShowRepositoryModal: (show: boolean) => void;
+  connectRepository: (input: RepositoryConnectionInput) => Promise<boolean>;
+  refreshRepositoryFiles: () => Promise<void>;
+  openRepositoryFile: (file: RepositoryHtmlFile) => Promise<boolean>;
+  disconnectRepository: () => void;
   setImportState: (state: Partial<ImportState>) => void;
   resetState: () => void;
   setFileTree: (tree: FileNode[]) => void;
@@ -70,6 +83,13 @@ const initialState: AppState = {
   leftPanelCollapsed: false,
   rightPanelCollapsed: false,
   showSettings: false,
+  repository: {
+    binding: null,
+    files: [],
+    currentFile: null,
+    isLoading: false,
+  },
+  showRepositoryModal: false,
   hasImported: false,
   iframeWindow: null,
 
@@ -124,7 +144,13 @@ export const useStore = create<AppStore>((set, get) => ({
         setPages(pages);
       }
 
-      set({ hasImported: true, currentFile: mainHtml?.path || null, currentPageIndex: 0, importState: { ...initialState.importState, isImporting: false } });
+      set((state) => ({
+        hasImported: true,
+        currentFile: mainHtml?.path || null,
+        currentPageIndex: 0,
+        importState: { ...initialState.importState, isImporting: false },
+        repository: { ...state.repository, currentFile: null, lastCommitUrl: undefined },
+      }));
     } catch (err) {
       console.error('Import failed:', err);
       addToast('导入失败: ' + (err instanceof Error ? err.message : '未知错误'), 'error');
@@ -154,7 +180,13 @@ export const useStore = create<AppStore>((set, get) => ({
         setPages(pages);
       }
 
-      set({ hasImported: true, currentFile: mainHtml?.path || null, currentPageIndex: 0, importState: { ...initialState.importState, isImporting: false } });
+      set((state) => ({
+        hasImported: true,
+        currentFile: mainHtml?.path || null,
+        currentPageIndex: 0,
+        importState: { ...initialState.importState, isImporting: false },
+        repository: { ...state.repository, currentFile: null, lastCommitUrl: undefined },
+      }));
       addToast('文件夹导入成功', 'success');
     } catch (err) {
       console.error('Directory import failed:', err);
@@ -296,25 +328,45 @@ export const useStore = create<AppStore>((set, get) => ({
   },
 
   saveToFile: async () => {
-    const { fileTree, currentFile, addToast } = get();
+    const { fileTree, currentFile, iframeWindow, repository, addToast } = get();
     if (!currentFile || fileTree.length === 0) {
       addToast('没有可保存的文件', 'warning');
       return;
     }
+    if (!repository.binding || !repository.currentFile) {
+      set({ showRepositoryModal: true });
+      addToast('请先从已绑定的 GitHub 仓库打开 PPT，再提交保存', 'warning');
+      return;
+    }
+    if (!iframeWindow) {
+      addToast('预览尚未加载完成，请稍后再保存', 'warning');
+      return;
+    }
     try {
+      set((state) => ({ repository: { ...state.repository, isLoading: true } }));
       const htmlNode = fileTree.find((n) => n.path === currentFile);
-      if (!htmlNode || !htmlNode.content) {
+      if (!htmlNode) {
         addToast('找不到文件内容', 'error');
         return;
       }
-      const content = typeof htmlNode.content === 'string'
-        ? htmlNode.content
-        : new TextDecoder().decode(htmlNode.content);
-      const blob = new Blob([content], { type: 'text/html' });
-      downloadBlob(blob, htmlNode.name);
-      addToast('文件已保存', 'success');
-    } catch (_err) {
-      addToast('保存失败', 'error');
+      const html = await requestIframeHtml(iframeWindow);
+      const saved = await saveRepositoryHtml(repository.binding, repository.currentFile, html);
+      const updatedFile = { ...repository.currentFile, sha: saved.fileSha, size: new Blob([html]).size };
+      set((state) => ({
+        fileTree: state.fileTree.map((node) => node.path === currentFile ? { ...node, content: html } : node),
+        repository: {
+          ...state.repository,
+          currentFile: updatedFile,
+          files: state.repository.files.map((file) => file.path === updatedFile.path ? updatedFile : file),
+          isLoading: false,
+          lastCommitUrl: saved.commitUrl,
+        },
+      }));
+      addToast(`已保存原文件并提交 ${saved.commitSha.slice(0, 7)}`, 'success');
+    } catch (err) {
+      addToast('保存失败: ' + (err instanceof Error ? err.message : '未知错误'), 'error');
+    } finally {
+      set((state) => ({ repository: { ...state.repository, isLoading: false } }));
     }
   },
 
@@ -329,7 +381,7 @@ export const useStore = create<AppStore>((set, get) => ({
       const blob = await createZip(fileTree);
       downloadBlob(blob, 'deckforge-export.zip');
       addToast('ZIP 导出成功', 'success');
-    } catch (_err) {
+    } catch {
       addToast('ZIP 导出失败', 'error');
     }
   },
@@ -353,7 +405,7 @@ export const useStore = create<AppStore>((set, get) => ({
       const blob = new Blob([inlined], { type: 'text/html' });
       downloadBlob(blob, 'deckforge-export.html');
       addToast('单 HTML 导出成功', 'success');
-    } catch (_err) {
+    } catch {
       addToast('导出失败', 'error');
     }
   },
@@ -406,6 +458,110 @@ export const useStore = create<AppStore>((set, get) => ({
 
   setShowSettings: (show) => {
     set({ showSettings: show });
+  },
+
+  setShowRepositoryModal: (show) => {
+    set({ showRepositoryModal: show });
+  },
+
+  connectRepository: async (input) => {
+    const { addToast } = get();
+    set((state) => ({ repository: { ...state.repository, isLoading: true } }));
+    try {
+      const connected = await connectGitHubRepository(input);
+      set({
+        repository: {
+          binding: connected.binding,
+          files: connected.files,
+          currentFile: null,
+          isLoading: false,
+        },
+      });
+      addToast(`已连接 ${connected.binding.owner}/${connected.binding.repo}`, 'success');
+      return true;
+    } catch (err) {
+      addToast('仓库连接失败: ' + (err instanceof Error ? err.message : '未知错误'), 'error');
+      return false;
+    } finally {
+      set((state) => ({ repository: { ...state.repository, isLoading: false } }));
+    }
+  },
+
+  refreshRepositoryFiles: async () => {
+    const { repository, addToast } = get();
+    if (!repository.binding) return;
+    set((state) => ({ repository: { ...state.repository, isLoading: true } }));
+    try {
+      const files = await listRepositoryHtmlFiles(repository.binding);
+      set((state) => ({ repository: { ...state.repository, files } }));
+      addToast(`已刷新，共 ${files.length} 个 HTML`, 'success');
+    } catch (err) {
+      addToast('刷新失败: ' + (err instanceof Error ? err.message : '未知错误'), 'error');
+    } finally {
+      set((state) => ({ repository: { ...state.repository, isLoading: false } }));
+    }
+  },
+
+  openRepositoryFile: async (file) => {
+    const { repository, addToast } = get();
+    if (!repository.binding) {
+      addToast('请先绑定 GitHub 仓库', 'warning');
+      return false;
+    }
+    set((state) => ({ repository: { ...state.repository, isLoading: true } }));
+    try {
+      const loaded = await loadRepositoryHtml(repository.binding, file);
+      const node: FileNode = {
+        id: crypto.randomUUID(),
+        name: loaded.file.name,
+        path: loaded.file.path,
+        type: 'file',
+        content: loaded.content,
+        mimeType: 'text/html',
+        isMainHtml: true,
+      };
+      const fileTree = [node];
+      set({
+        fileTree,
+        originalFileTree: JSON.parse(JSON.stringify(fileTree)),
+        currentFile: node.path,
+        pages: parsePageStructure(loaded.content, node.path),
+        currentPageIndex: 0,
+        selectedElement: null,
+        undoStack: [],
+        redoStack: [],
+        hasImported: true,
+        isEditMode: false,
+        showRepositoryModal: false,
+        repository: {
+          ...repository,
+          currentFile: loaded.file,
+          isLoading: false,
+          lastCommitUrl: undefined,
+        },
+      });
+      addToast(`已从仓库打开 ${loaded.file.name}`, 'success');
+      return true;
+    } catch (err) {
+      addToast('打开失败: ' + (err instanceof Error ? err.message : '未知错误'), 'error');
+      return false;
+    } finally {
+      set((state) => ({ repository: { ...state.repository, isLoading: false } }));
+    }
+  },
+
+  disconnectRepository: () => {
+    set((state) => ({
+      repository: {
+        binding: null,
+        files: [],
+        currentFile: null,
+        isLoading: false,
+      },
+      // 已打开的 PPT 保留为临时草稿，但不能再提交到已断开的仓库。
+      showRepositoryModal: state.showRepositoryModal,
+    }));
+    get().addToast('已断开 GitHub 仓库', 'info');
   },
 
   setImportState: (state) => {
@@ -533,6 +689,32 @@ export const useStore = create<AppStore>((set, get) => ({
     });
   },
 }));
+
+/** 从预览 iframe 获取已经应用全部编辑的、可持久化 HTML。 */
+function requestIframeHtml(iframeWindow: Window): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const requestId = crypto.randomUUID();
+    const timeout = window.setTimeout(() => {
+      window.removeEventListener('message', handleMessage);
+      reject(new Error('读取当前编辑内容超时'));
+    }, 5000);
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.source !== iframeWindow) return;
+      if (event.data?.type !== 'DECKFORGE_HTML_RESPONSE' || event.data.requestId !== requestId) return;
+      window.clearTimeout(timeout);
+      window.removeEventListener('message', handleMessage);
+      if (typeof event.data.html !== 'string') {
+        reject(new Error('预览未返回有效 HTML'));
+        return;
+      }
+      resolve(event.data.html);
+    };
+
+    window.addEventListener('message', handleMessage);
+    iframeWindow.postMessage({ type: 'DECKFORGE_REQUEST_HTML', requestId }, '*');
+  });
+}
 
 /**
  * 解析 HTML 页面结构，识别 slides

@@ -1,12 +1,12 @@
 import { useRef, useCallback } from 'react';
-import { Upload, Save, RotateCcw, Undo2, Redo2, Edit3, Eye, Settings, Plus, Minus, FileArchive, FileCode, Layers, Paintbrush } from 'lucide-react';
+import { Upload, Save, RotateCcw, Undo2, Redo2, Edit3, Eye, Settings, Plus, Minus, FileArchive, FileCode, Layers, Paintbrush, GitFork } from 'lucide-react';
 import { useStore } from '../../store';
 import { APP_NAME, APP_NAME_CN } from '../../utils/constants';
 import { IconButton } from '../ui/IconButton';
 
 export function TopBar() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { hasImported, isEditMode, zoom, undoStack, redoStack, selectedElement, formatPainterSource, formatPainterActive, formatPainterSticky, setEditMode, setZoom, undo, redo, restoreOriginal, exportZip, exportSingleHtml, saveToFile, setShowSettings, addToast, copyFormatPainter, toggleFormatPainter, setFormatPainterSticky } = useStore();
+  const { hasImported, isEditMode, zoom, undoStack, redoStack, selectedElement, formatPainterSource, formatPainterActive, formatPainterSticky, repository, setEditMode, setZoom, undo, redo, restoreOriginal, exportZip, exportSingleHtml, saveToFile, setShowSettings, setShowRepositoryModal, addToast, copyFormatPainter, toggleFormatPainter, setFormatPainterSticky } = useStore();
 
   const handleImportClick = useCallback(() => { fileInputRef.current?.click(); }, []);
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,6 +38,16 @@ export function TopBar() {
             <span className="hidden sm:inline">导入</span>
           </button>
           <input ref={fileInputRef} type="file" accept=".html,.htm,.zip" multiple className="sr-only" onChange={handleFileChange} />
+          <button
+            onClick={() => setShowRepositoryModal(true)}
+            className={`deck-btn-ghost flex items-center gap-1.5 ${repository.binding ? 'deck-btn-ghost-active' : ''}`}
+            title={repository.binding ? `已连接 ${repository.binding.owner}/${repository.binding.repo}` : '绑定 GitHub PPT 仓库'}
+          >
+            <GitFork className="w-3.5 h-3.5" />
+            <span className="hidden md:inline max-w-28 truncate">
+              {repository.binding ? repository.binding.repo : 'PPT 仓库'}
+            </span>
+          </button>
 
           {hasImported && (
             <>
@@ -76,15 +86,20 @@ export function TopBar() {
                 <Paintbrush className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{formatPainterActive ? '格式刷中' : '格式刷'}</span>
               </button>
-              <button onClick={() => { saveToFile(); addToast('保存成功', 'success'); }} className="deck-btn-ghost flex items-center gap-1.5" title="保存">
+              <button
+                onClick={() => void saveToFile()}
+                className="deck-btn-ghost flex items-center gap-1.5"
+                title={repository.currentFile ? `保存原文件并提交：${repository.currentFile.path}` : '绑定仓库并从仓库打开 PPT 后保存'}
+                disabled={repository.isLoading}
+              >
                 <Save className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">保存</span>
+                <span className="hidden sm:inline">提交保存</span>
               </button>
-              <button onClick={() => { exportZip(); addToast('ZIP 导出成功', 'success'); }} className="deck-btn-ghost flex items-center gap-1.5" title="导出 ZIP">
+              <button onClick={() => void exportZip()} className="deck-btn-ghost flex items-center gap-1.5" title="导出 ZIP">
                 <FileArchive className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">ZIP</span>
               </button>
-              <button onClick={() => { exportSingleHtml(); addToast('单 HTML 导出成功', 'success'); }} className="deck-btn-ghost flex items-center gap-1.5" title="导出单 HTML">
+              <button onClick={() => void exportSingleHtml()} className="deck-btn-ghost flex items-center gap-1.5" title="导出单 HTML">
                 <FileCode className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">单 HTML</span>
               </button>
@@ -98,7 +113,7 @@ export function TopBar() {
 
         {/* 缩放控制 — 绝对居中 */}
         {hasImported && (
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
+          <div className="absolute left-1/2 -translate-x-1/2 hidden 2xl:flex items-center gap-1">
             <IconButton icon={Minus} title="缩小" onClick={handleZoomOut} size="sm" />
             <span className="text-[11px] text-deck-text2 w-10 text-center tabular-nums">{zoom}%</span>
             <IconButton icon={Plus} title="放大" onClick={handleZoomIn} size="sm" />

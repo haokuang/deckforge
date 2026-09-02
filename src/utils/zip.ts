@@ -8,8 +8,6 @@ export async function parseZip(file: File): Promise<FileNode[]> {
   const zip = await JSZip.loadAsync(file);
   const root: FileNode[] = [];
 
-  const pathMap = new Map<string, FileNode>();
-
   for (const [path, entry] of Object.entries(zip.files)) {
     if (entry.dir) continue;
 

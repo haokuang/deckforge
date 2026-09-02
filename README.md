@@ -37,7 +37,7 @@
 
 DeckForge turns static HTML presentations into editable decks. Instead of editing markup by hand, you interact with slides visually: select elements, edit text, tweak styles, replace images, and export the result.
 
-The application is built as a single-page React app that runs entirely in the browser. Files are parsed locally with JSZip and the File System Access API; nothing is uploaded to a server.
+The application is built as a single-page React app that runs entirely in the browser. Local files are parsed locally with JSZip and the File System Access API. The optional GitHub repository workflow talks directly to the GitHub API and does not use a DeckForge backend.
 
 ### Why DeckForge?
 
@@ -54,9 +54,10 @@ Modern AI tools generate high-quality HTML slides, but making small edits afterw
 | **Slide Detection** | Automatically recognizes reveal.js, impress.js, fullpage.js, swiper, and native `.slide` / `.page` / `section` structures. |
 | **Format Painter** | Copy styles from one element and apply them to others, with single-shot and continuous modes. |
 | **Image Replacement** | Replace images inside the presentation without touching the markup. |
-| **Flexible Export** | Save back to the original file, export a ZIP bundle, or merge everything into a single HTML file. |
+| **Flexible Export** | Commit back to the same GitHub path, export a ZIP bundle, or merge everything into a single HTML file. |
 | **Undo / Redo** | Full history stack for style and content changes. |
-| **Privacy First** | All processing happens locally in the browser. |
+| **Privacy First** | Local imports stay in the browser; repository saves go directly to the GitHub API. |
+| **Versioned Save** | Open HTML decks from a bound GitHub repository, save to the original path, and create a commit automatically. |
 
 ---
 
@@ -122,6 +123,17 @@ The Docker image serves the static build via Nginx on port `8080`. Note that bro
 ---
 
 ## Usage
+
+### Recommended: bind a PPT repository
+
+Use one GitHub repository (or one folder inside it) for all single-file HTML presentations:
+
+1. Create a fine-grained GitHub token for the repository with **Metadata: Read** and **Contents: Read and write** permissions.
+2. In DeckForge, click **PPT Repository** and enter `owner/repo`, an optional branch/folder, and the token.
+3. Open an HTML file from the repository list.
+4. Edit the deck and click **Commit Save**. DeckForge updates that same repository path and creates a Git commit such as `chore(ppt): update deck.html via DeckForge`.
+
+The token is kept only in the current page's memory and must be entered again after a refresh. Local file/ZIP imports remain available for temporary editing and export, but cannot be committed back to an original path because a normal browser file input does not grant persistent write access.
 
 ### 1. Import a Presentation
 

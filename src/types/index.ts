@@ -75,6 +75,32 @@ export interface AIAdapterSettings {
   enabled: boolean;
 }
 
+/** GitHub PPT 仓库连接信息。Token 仅保存在当前页面内存中。 */
+export interface GitHubRepositoryBinding {
+  owner: string;
+  repo: string;
+  branch: string;
+  folder: string;
+  token: string;
+}
+
+/** GitHub 仓库中的单个 HTML 演示稿。 */
+export interface RepositoryHtmlFile {
+  name: string;
+  path: string;
+  sha: string;
+  size: number;
+}
+
+/** GitHub 仓库工作区状态。 */
+export interface RepositoryState {
+  binding: GitHubRepositoryBinding | null;
+  files: RepositoryHtmlFile[];
+  currentFile: RepositoryHtmlFile | null;
+  isLoading: boolean;
+  lastCommitUrl?: string;
+}
+
 /** 导入状态 */
 export interface ImportState {
   isImporting: boolean;
@@ -130,6 +156,10 @@ export interface AppState {
   leftPanelCollapsed: boolean;
   rightPanelCollapsed: boolean;
   showSettings: boolean;
+
+  // GitHub PPT 仓库
+  repository: RepositoryState;
+  showRepositoryModal: boolean;
   
   // 是否已导入文件
   hasImported: boolean;

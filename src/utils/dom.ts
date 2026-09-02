@@ -86,13 +86,10 @@ export function isImageElement(el: HTMLElement): boolean {
 }
 
 /**
- * 为 iframe 注入编辑桥接脚本
+ * 生成 iframe 编辑桥接脚本，单独导出便于对真实演示文稿做集成验证。
  */
-export function injectEditorBridge(iframe: HTMLIFrameElement): void {
-  if (!iframe.contentWindow || !iframe.contentDocument) return;
-
-  const script = iframe.contentDocument.createElement('script');
-  script.textContent = `
+export function createEditorBridgeScript(): string {
+  return `
     (function() {
       if (window.__deckforgeBridgeLoaded) return;
       window.__deckforgeBridgeLoaded = true;
@@ -102,6 +99,13 @@ export function injectEditorBridge(iframe: HTMLIFrameElement): void {
       let allSlides = [];
       let currentSlideIndex = 0;
       let originalDisplayStyles = new Map();
+      let originalSlideStates = [];
+      let managedStateClasses = [];
+
+      const STATE_CLASS_CANDIDATES = [
+        'active', 'current', 'visible', 'show', 'selected',
+        'is-active', 'is-current', 'is-visible', 'shown', 'in-view',
+      ];
 
       // 通用 Slide 选择器（在未检测到知名库时使用）
       const GENERIC_SELECTORS = [
@@ -322,21 +326,23 @@ export function injectEditorBridge(iframe: HTMLIFrameElement): void {
           } catch (e) {}
         }
 
-        // 原生降级：识别并尊重页面自身的幻灯片显示约定
-        // 常见的类驱动显示：.active / .current / .visible / .show / .selected
-        const activeClass = detectActiveClassPattern();
+        // 原生降级：识别并尊重页面自身的幻灯片显示约定。
+        // 一些演示会组合多个状态类：例如 .active 控制页面容器可见，
+        // .visible 再触发内部 reveal 动画。必须整体迁移这些状态类，否则
+        // 新页面虽然已激活，其内容仍可能停留在 opacity: 0 的初始态。
+        const activeClasses = managedStateClasses.length > 0
+          ? managedStateClasses
+          : detectActiveClassPatterns();
 
-        if (activeClass) {
-          // 类驱动切换（如 SmartHybridDetectorV3_Defense.html 的 .active）
+        if (activeClasses.length > 0) {
+          // 类驱动切换：把当前页已有的全部激活/入场状态迁移到目标页。
           allSlides.forEach((el, i) => {
-            if (i === index) {
-              el.classList.add(activeClass);
-              // 清除可能由旧逻辑留下的内联 display，让 CSS 类生效
-              el.style.display = '';
-            } else {
-              el.classList.remove(activeClass);
-              el.style.display = '';
-            }
+            const isTarget = i === index;
+            activeClasses.forEach(cls => el.classList.toggle(cls, isTarget));
+            // 清除可能由旧逻辑留下的内联 display，让 CSS 类生效
+            el.style.display = '';
+            // 与页面状态保持一致，避免导入文件的旧 aria-hidden 值残留。
+            el.setAttribute('aria-hidden', isTarget ? 'false' : 'true');
           });
         } else {
           // display 驱动切换
@@ -365,15 +371,57 @@ export function injectEditorBridge(iframe: HTMLIFrameElement): void {
         document.body.offsetHeight;
       }
 
-      function detectActiveClassPattern() {
-        if (allSlides.length < 2) return null;
-        const candidates = ['active', 'current', 'visible', 'show', 'selected'];
-        for (const cls of candidates) {
+      function detectActiveClassPatterns() {
+        if (allSlides.length < 2) return [];
+        return STATE_CLASS_CANDIDATES.filter(cls => {
           const count = allSlides.filter(el => el.classList.contains(cls)).length;
-          // 有且仅有部分 slide 拥有该 class，才认为是激活标记
-          if (count > 0 && count < allSlides.length) return cls;
-        }
-        return null;
+          // 有且仅有部分 slide 拥有该 class，才认为是页面状态标记。
+          return count > 0 && count < allSlides.length;
+        });
+      }
+
+      function captureOriginalSlideStates() {
+        managedStateClasses = detectActiveClassPatterns();
+        originalSlideStates = allSlides.map(el => ({
+          stateClasses: STATE_CLASS_CANDIDATES.filter(cls => el.classList.contains(cls)),
+          ariaHidden: el.getAttribute('aria-hidden'),
+          inlineDisplay: el.style.display,
+        }));
+      }
+
+      function serializeDocument() {
+        // 高亮属于 DeckForge 的临时 UI，保存前先移除。
+        clearHighlight();
+
+        // 给真实 slide 加临时索引，便于在克隆文档中精确恢复加载时状态。
+        allSlides.forEach((el, index) => el.setAttribute('data-deckforge-slide-index', String(index)));
+        const clone = document.documentElement.cloneNode(true);
+        allSlides.forEach(el => el.removeAttribute('data-deckforge-slide-index'));
+
+        const clonedSlides = clone.querySelectorAll('[data-deckforge-slide-index]');
+        clonedSlides.forEach(el => {
+          const index = Number(el.getAttribute('data-deckforge-slide-index'));
+          const original = originalSlideStates[index];
+          el.removeAttribute('data-deckforge-slide-index');
+          if (!original) return;
+          STATE_CLASS_CANDIDATES.forEach(cls => el.classList.remove(cls));
+          original.stateClasses.forEach(cls => el.classList.add(cls));
+          if (original.ariaHidden === null) el.removeAttribute('aria-hidden');
+          else el.setAttribute('aria-hidden', original.ariaHidden);
+          el.style.display = original.inlineDisplay;
+        });
+
+        // 移除仅供预览和编辑使用的注入内容。
+        clone.querySelectorAll('#__deckforge-bridge, #__deckforge-reset, #__deckforge-design-size').forEach(el => el.remove());
+        clone.querySelectorAll('[data-deckforge-editing]').forEach(el => {
+          el.removeAttribute('data-deckforge-editing');
+          el.removeAttribute('contenteditable');
+          el.style.removeProperty('user-select');
+          el.style.removeProperty('-webkit-user-select');
+          el.style.removeProperty('pointer-events');
+        });
+
+        return '<!DOCTYPE html>\\n' + clone.outerHTML;
       }
 
       function generateSelector(el) {
@@ -441,6 +489,7 @@ export function injectEditorBridge(iframe: HTMLIFrameElement): void {
       function enterTextEdit(el) {
         if (!el || el.isContentEditable) return;
         // 强制允许文本选择，避免父元素 user-select: none 导致无法编辑
+        el.setAttribute('data-deckforge-editing', 'true');
         el.contentEditable = 'true';
         el.style.userSelect = 'text';
         el.style.webkitUserSelect = 'text';
@@ -462,6 +511,7 @@ export function injectEditorBridge(iframe: HTMLIFrameElement): void {
           el.style.userSelect = '';
           el.style.webkitUserSelect = '';
           el.style.pointerEvents = '';
+          el.removeAttribute('data-deckforge-editing');
           el.removeEventListener('blur', onBlur);
           window.parent.postMessage({
             type: 'ELEMENT_TEXT_CHANGED',
@@ -543,6 +593,17 @@ export function injectEditorBridge(iframe: HTMLIFrameElement): void {
         if (e.data.type === 'DECKFORGE_SHOW_PAGE') {
           showSlide(e.data.index);
         }
+        if (e.data.type === 'DECKFORGE_REQUEST_HTML') {
+          try {
+            window.parent.postMessage({
+              type: 'DECKFORGE_HTML_RESPONSE',
+              requestId: e.data.requestId,
+              html: serializeDocument(),
+            }, '*');
+          } catch (err) {
+            console.error('Serialize HTML failed:', err);
+          }
+        }
         if (e.data.type === 'DECKFORGE_APPLY_STYLE') {
           const target = document.querySelector(e.data.selector);
           if (target) target.style[e.data.property] = e.data.value;
@@ -584,9 +645,21 @@ export function injectEditorBridge(iframe: HTMLIFrameElement): void {
 
       // 初始化：查找所有 slides，默认显示第一个
       findAllSlides();
+      captureOriginalSlideStates();
       showSlide(0);
     })();
   `;
+}
+
+/**
+ * 为 iframe 注入编辑桥接脚本
+ */
+export function injectEditorBridge(iframe: HTMLIFrameElement): void {
+  if (!iframe.contentWindow || !iframe.contentDocument) return;
+
+  const script = iframe.contentDocument.createElement('script');
+  script.id = '__deckforge-bridge';
+  script.textContent = createEditorBridgeScript();
   iframe.contentDocument.head.appendChild(script);
 }
 
