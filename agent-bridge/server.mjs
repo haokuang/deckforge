@@ -25,7 +25,12 @@ const CODEX_BIN = process.env.CODEX_BIN || 'codex';
 const AGENT_TIMEOUT_MS = Number(process.env.AGENT_TIMEOUT_MS || 600000);
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 
-const state = { running: 0 };
+const state = {
+  running: 0,
+  events: [],            // 最近一次任务的过程事件（SSE 快照用）
+  taskActive: false,
+  sseClients: new Set(), // 正在订阅 /api/agent/events 的响应流
+};
 
 const SERVER = { startedAt: new Date().toISOString() };
 
@@ -63,6 +68,71 @@ function readBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+function clip(str, max = 4000) {
+  const s = String(str ?? '');
+  return s.length > max ? s.slice(0, max) + `\n…（已截断，共 ${s.length} 字符）` : s;
+}
+
+// 展示用：最终回复里的哨兵块对用户没有意义，替换成一句提示
+function prettyAgentText(text) {
+  return String(text || '')
+    .replace(/<!--DECKFORGE:BEGIN-->[\s\S]*?<!--DECKFORGE:END-->/g, '\n〔已提取替换用 HTML〕\n')
+    .trim();
+}
+
+// 把 codex exec --json 的 JSONL 事件压缩成前端好渲染的显示事件；
+// 只挑有信息量的，item.started 等噪音直接丢弃。
+function normalizeCodexEvent(evt) {
+  if (evt.type === 'turn.started') return { kind: 'status', text: '开始执行' };
+  if (evt.type === 'turn.completed') {
+    const u = evt.usage || {};
+    return { kind: 'done', usage: { input: u.input_tokens, output: u.output_tokens } };
+  }
+  if (evt.type === 'error') return { kind: 'error', text: clip(evt.message || '未知错误', 1000) };
+  if (evt.type !== 'item.completed' || !evt.item) return null;
+  const item = evt.item;
+  switch (item.type) {
+    case 'agent_message':
+      return { kind: 'message', text: clip(prettyAgentText(item.text), 8000) };
+    case 'reasoning': {
+      const text = String(item.text || '').trim();
+      return text ? { kind: 'reasoning', text: clip(text, 2000) } : null;
+    }
+    case 'command_execution':
+      return {
+        kind: 'command',
+        command: String(item.command || ''),
+        exitCode: typeof item.exit_code === 'number' ? item.exit_code : null,
+        output: clip(item.aggregated_output || ''),
+      };
+    case 'file_change': {
+      const changes = Array.isArray(item.changes) ? item.changes : [];
+      const text = changes.map((c) => `${c.kind || '修改'} ${c.path || ''}`).join('\n').trim();
+      return text ? { kind: 'file_change', text } : null;
+    }
+    case 'mcp_tool_call':
+      return { kind: 'tool', text: clip(item.tool || item.server || 'MCP 调用', 500) };
+    case 'web_search':
+      return { kind: 'tool', text: clip(item.query || '网页搜索', 500) };
+    case 'error':
+      // codex 会把环境警告（如 code-mode 缺失）也作为 error item 发出，但任务仍可成功
+      return { kind: 'notice', text: clip(item.message || '', 1000) };
+    default:
+      return null;
+  }
+}
+
+function broadcastEvent(evt) {
+  const payload = `data: ${JSON.stringify(evt)}\n\n`;
+  for (const res of state.sseClients) {
+    try {
+      res.write(payload);
+    } catch {
+      state.sseClients.delete(res);
+    }
+  }
 }
 
 function codexVersion() {
@@ -134,11 +204,12 @@ function extractHtml(text) {
   return html;
 }
 
-function runCodex(prompt, abortSignal) {
+function runCodex(prompt, abortSignal, onEvent) {
   return new Promise((resolve, reject) => {
     const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'deckforge-agent-'));
     const args = [
       'exec',
+      '--json',
       '--sandbox', 'read-only',
       '--skip-git-repo-check',
       '-C', workDir,
@@ -150,7 +221,9 @@ function runCodex(prompt, abortSignal) {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
-    let stdout = '';
+    let lineBuf = '';
+    let plainStdout = '';
+    const messageTexts = []; // agent_message 文本，用于重建最终回复
     let stderr = '';
     let settled = false;
     let timer = null;
@@ -174,7 +247,27 @@ function runCodex(prompt, abortSignal) {
       reject(new Error(`Codex 执行超时（${Math.round(AGENT_TIMEOUT_MS / 1000)} 秒）`));
     }, AGENT_TIMEOUT_MS);
 
-    child.stdout.on('data', (d) => { stdout += d; });
+    child.stdout.on('data', (d) => {
+      lineBuf += d.toString('utf8');
+      let idx;
+      while ((idx = lineBuf.indexOf('\n')) !== -1) {
+        const line = lineBuf.slice(0, idx).trim();
+        lineBuf = lineBuf.slice(idx + 1);
+        if (!line) continue;
+        let evt = null;
+        try { evt = JSON.parse(line); } catch { evt = null; }
+        if (!evt || typeof evt !== 'object') {
+          // 不是 JSONL（旧版 CLI 不支持 --json 时），原样保留用于兜底提取
+          plainStdout += `${line}\n`;
+          continue;
+        }
+        if (evt.type === 'item.completed' && evt.item?.type === 'agent_message' && typeof evt.item.text === 'string') {
+          messageTexts.push(evt.item.text);
+        }
+        const normalized = normalizeCodexEvent(evt);
+        if (normalized && typeof onEvent === 'function') onEvent(normalized);
+      }
+    });
     child.stderr.on('data', (d) => { stderr += d; });
 
     child.stdin.on('error', () => {});
@@ -198,7 +291,9 @@ function runCodex(prompt, abortSignal) {
       clearTimeout(timer);
       cleanupSignal();
       if (code === 0) {
-        resolve(stdout);
+        // --json 模式下 stdout 是事件流，最终回复要从 agent_message 重建；
+        // 没有消息时退回原始文本行（旧版 CLI 兜底）
+        resolve(messageTexts.length > 0 ? messageTexts.join('\n\n') : plainStdout + lineBuf);
       } else {
         const detail = stderr.trim().split('\n').slice(-3).join(' ');
         reject(new Error(`Codex 退出码 ${code}${detail ? `：${detail}` : ''}`));
@@ -223,6 +318,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'GET' && url.pathname === '/api/agent/events') {
+    // SSE：连接即回放当前/最近一次任务的全部事件，之后实时推送
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    });
+    res.write('retry: 2000\n\n');
+    res.write(`data: ${JSON.stringify({ kind: 'snapshot', active: state.taskActive, events: state.events })}\n\n`);
+    state.sseClients.add(res);
+    req.on('close', () => { state.sseClients.delete(res); });
+    return;
+  }
+
   if (req.method === 'POST' && url.pathname === '/api/agent/run') {
     if (state.running > 0) {
       sendJson(res, 409, { ok: false, error: '已有一个 Agent 任务在运行，请等待其完成' });
@@ -242,20 +351,26 @@ const server = http.createServer(async (req, res) => {
       if (!slideHtml.trim()) throw new Error('缺少幻灯片内容');
 
       state.running += 1;
+      state.events = [];
+      state.taskActive = true;
+      const emit = (evt) => { state.events.push(evt); broadcastEvent(evt); };
+      emit({ kind: 'task_start', instruction: clip(instruction, 300) });
       console.log(`[agent] 收到指令（${slideHtml.length} 字符）：${instruction.slice(0, 80)}`);
-      const raw = await runCodex(buildPrompt({ instruction, slideHtml, context: body.context }), abortController.signal);
+      const raw = await runCodex(buildPrompt({ instruction, slideHtml, context: body.context }), abortController.signal, emit);
       if (aborted) {
         sendJson(res, 499, { ok: false, error: '客户端已取消' });
         return;
       }
       const html = extractHtml(raw);
-      console.log(`[agent] 完成，返回 ${html.length} 字符`);
-      sendJson(res, 200, { ok: true, html });
+      console.log(`[agent] 完成，返回 ${html.length} 字符，过程事件 ${state.events.length} 条`);
+      sendJson(res, 200, { ok: true, html, events: state.events });
     } catch (err) {
       console.error('[agent] 失败：', err.message);
       sendJson(res, 502, { ok: false, error: err instanceof Error ? err.message : '未知错误' });
     } finally {
       state.running -= 1;
+      state.taskActive = false;
+      broadcastEvent({ kind: 'task_end' });
     }
     return;
   }

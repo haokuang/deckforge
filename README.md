@@ -153,7 +153,8 @@ No cloud, no API keys — the AI panel drives the **Codex CLI installed on your 
 2. Run `npm run agent` to start the bridge on `http://127.0.0.1:8787` (test the connection in **Settings**).
 3. Open the **AI** panel on the right, describe the change (e.g. "把标题改成红色并居中", "add a footer with today's date"), and run.
 4. The bridge locks the current page, exports its HTML to Codex, applies the returned markup, and unlocks. Other pages stay fully editable while the agent works.
-5. Not happy with the result? One click reverts the entire AI edit via the snapshot history.
+5. A **Codex work log** streams the agent's replies, reasoning and tool calls live via SSE — the same visibility as running `codex` in a terminal.
+6. Not happy with the result? One click reverts the entire AI edit via the snapshot history.
 
 The bridge wraps `codex exec --sandbox read-only`, listens only on localhost, and processes one task at a time. Configuration (port, Codex binary, model, timeout) and the HTTP API are documented in [`agent-bridge/README.md`](./agent-bridge/README.md).
 

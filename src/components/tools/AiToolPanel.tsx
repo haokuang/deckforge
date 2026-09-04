@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bot, Loader2, Send, Square, Undo2, PlugZap, CircleAlert, CheckCircle2 } from 'lucide-react';
+import { Bot, ChevronDown, ChevronUp, Loader2, Send, Square, Terminal, Undo2, PlugZap, CircleAlert, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../../store';
 
 const QUICK_PROMPTS = [
@@ -15,6 +15,68 @@ function formatElapsed(startedAt: number): string {
   return `${Math.floor(seconds / 60)}m${seconds % 60}s`;
 }
 
+type AgentLogEvent = {
+  kind: string;
+  text?: string;
+  instruction?: string;
+  command?: string;
+  output?: string;
+  exitCode?: number | null;
+  usage?: { input?: number; output?: number };
+  active?: boolean;
+  events?: AgentLogEvent[];
+};
+
+// 终端风格的日志行，尽量还原 codex CLI 的观感
+function LogRow({ evt }: { evt: AgentLogEvent }) {
+  switch (evt.kind) {
+    case 'task_start':
+      return <p className="text-emerald-300 break-all">▶ {evt.instruction}</p>;
+    case 'status':
+      return <p className="text-zinc-500">· {evt.text}</p>;
+    case 'notice':
+      return <p className="text-amber-300 break-all">⚠ {evt.text}</p>;
+    case 'error':
+      return <p className="text-red-400 break-all">✕ {evt.text}</p>;
+    case 'message':
+      return (
+        <div className="whitespace-pre-wrap break-words border-l-2 border-sky-500/50 pl-2 text-zinc-100">
+          {evt.text}
+        </div>
+      );
+    case 'reasoning':
+      return <p className="italic whitespace-pre-wrap break-words text-zinc-500">💭 {evt.text}</p>;
+    case 'command':
+      return (
+        <div>
+          <p className="break-all">
+            <span className="text-sky-300">$ </span>
+            <span className="text-zinc-300">{evt.command}</span>
+            {evt.exitCode != null && (
+              <span className={evt.exitCode === 0 ? 'text-emerald-400' : 'text-red-400'}>（退出码 {evt.exitCode}）</span>
+            )}
+          </p>
+          {evt.output ? (
+            <pre className="mt-0.5 max-h-24 overflow-y-auto whitespace-pre-wrap break-all text-zinc-500">{evt.output}</pre>
+          ) : null}
+        </div>
+      );
+    case 'file_change':
+      return <p className="whitespace-pre-wrap break-all text-violet-300">✎ {evt.text}</p>;
+    case 'tool':
+      return <p className="break-all text-cyan-300">🔧 {evt.text}</p>;
+    case 'done': {
+      const usage = evt.usage;
+      const suffix = usage ? `（输入 ${usage.input ?? '?'} / 输出 ${usage.output ?? '?'} tokens）` : '';
+      return <p className="text-emerald-300">✓ 完成{suffix}</p>;
+    }
+    case 'task_end':
+      return <div className="my-1 border-t border-zinc-800" />;
+    default:
+      return null;
+  }
+}
+
 export function AiToolPanel() {
   const {
     agentSettings, agentTask, lastAgentEdit, currentPageIndex, pages,
@@ -27,6 +89,10 @@ export function AiToolPanel() {
   const [connResult, setConnResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [, forceTick] = useState(0);
   const tickRef = useRef<number | null>(null);
+  const [log, setLog] = useState<AgentLogEvent[]>([]);
+  const [logOpen, setLogOpen] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const logBoxRef = useRef<HTMLDivElement | null>(null);
 
   const running = agentTask.status === 'running';
   const lockedOtherPage = running && agentTask.pageIndex !== currentPageIndex;
@@ -43,6 +109,42 @@ export function AiToolPanel() {
   useEffect(() => {
     setServerUrl(agentSettings.serverUrl);
   }, [agentSettings.serverUrl]);
+
+  // 任务运行期间订阅桥接的 SSE 事件流，实时展示 Codex 的回复与工具调用
+  useEffect(() => {
+    if (!running) {
+      eventSourceRef.current?.close();
+      eventSourceRef.current = null;
+      return;
+    }
+    const base = agentSettings.serverUrl.replace(/\/+$/, '');
+    const source = new EventSource(`${base}/api/agent/events`);
+    eventSourceRef.current = source;
+    source.onmessage = (e) => {
+      try {
+        const evt = JSON.parse(e.data) as AgentLogEvent;
+        if (evt.kind === 'snapshot') {
+          setLog(evt.events ?? []);
+          setLogOpen(true);
+          return;
+        }
+        setLog((prev) => [...prev.slice(-499), evt]);
+      } catch {
+        // 忽略无法解析的行
+      }
+    };
+    return () => {
+      source.close();
+      eventSourceRef.current = null;
+    };
+  }, [running, agentTask.startedAt, agentSettings.serverUrl]);
+
+  // 新日志到达时滚动到底部
+  useEffect(() => {
+    if (logOpen && logBoxRef.current) {
+      logBoxRef.current.scrollTop = logBoxRef.current.scrollHeight;
+    }
+  }, [log, logOpen]);
 
   const handleTest = async () => {
     setTesting(true);
@@ -167,6 +269,33 @@ export function AiToolPanel() {
             <Square className="w-3 h-3" />
             <span>取消任务</span>
           </button>
+        </div>
+      )}
+
+      {/* Codex 工作日志：实时展示回复、思考与工具调用 */}
+      {(running || log.length > 0) && (
+        <div className="rounded-xl border border-deck-border overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setLogOpen((open) => !open)}
+            className="w-full flex items-center gap-2 px-3 py-2 bg-deck-fill text-[11px] text-deck-text2 hover:text-deck-text transition-colors"
+          >
+            <Terminal className="w-3.5 h-3.5 text-deck-accent shrink-0" />
+            <span>Codex 工作日志</span>
+            {running && <Loader2 className="w-3 h-3 animate-spin text-deck-accent" />}
+            <span className="ml-auto text-[10px] text-deck-text3">{log.length} 条</span>
+            {logOpen ? <ChevronUp className="w-3.5 h-3.5 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
+          </button>
+          {logOpen && (
+            <div
+              ref={logBoxRef}
+              className="max-h-64 overflow-y-auto bg-zinc-950/90 px-2.5 py-2 font-mono text-[10px] leading-relaxed space-y-1.5"
+            >
+              {log.length === 0
+                ? <p className="text-zinc-500">等待 Codex 输出…</p>
+                : log.map((evt, i) => <LogRow key={i} evt={evt} />)}
+            </div>
+          )}
         </div>
       )}
 

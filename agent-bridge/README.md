@@ -59,4 +59,5 @@ npm run dev
 ## HTTP API
 
 - `GET /api/health` — 健康检查，返回 `{ ok, codex }`（codex 为版本号或 null）。
-- `POST /api/agent/run` — body: `{ instruction, slideHtml, context? }`，返回 `{ ok, html }` 或 `{ ok: false, error }`。
+- `POST /api/agent/run` — body: `{ instruction, slideHtml, context? }`，返回 `{ ok, html, events }` 或 `{ ok: false, error }`。`events` 为本次任务的过程事件（Codex 回复、工具调用、耗时等）。
+- `GET /api/agent/events` — SSE 事件流。连接即回放当前/最近一次任务的全部事件，之后实时推送；编辑器的「Codex 工作日志」面板即订阅此接口。
