@@ -1,17 +1,12 @@
-import { useRef, useCallback } from 'react';
-import { Upload, Save, RotateCcw, Undo2, Redo2, Edit3, Eye, Settings, Plus, Minus, FileArchive, FileCode, Layers, Paintbrush, GitFork, Moon, Sun } from 'lucide-react';
+import { useCallback } from 'react';
+import { Upload, Save, RotateCcw, Undo2, Redo2, Edit3, Eye, Settings, Plus, Minus, Layers, Paintbrush, Moon, Sun, X } from 'lucide-react';
 import { useStore } from '../../store';
 import { APP_NAME, APP_NAME_CN } from '../../utils/constants';
 import { IconButton } from '../ui/IconButton';
 
 export function TopBar() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { hasImported, isEditMode, zoom, undoStack, redoStack, selectedElement, formatPainterSource, formatPainterActive, formatPainterSticky, repository, theme, setEditMode, setZoom, undo, redo, restoreOriginal, exportZip, exportSingleHtml, saveToFile, setShowSettings, setShowRepositoryModal, setTheme, addToast, copyFormatPainter, toggleFormatPainter, setFormatPainterSticky } = useStore();
+  const { hasImported, isEditMode, zoom, undoCount, redoCount, selectedElement, formatPainterSource, formatPainterActive, formatPainterSticky, theme, setEditMode, setZoom, undo, redo, restoreOriginal, saveToFile, closeDocument, setShowSettings, setTheme, addToast, copyFormatPainter, toggleFormatPainter, setFormatPainterSticky, importPickedFiles } = useStore();
 
-  const handleImportClick = useCallback(() => { fileInputRef.current?.click(); }, []);
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files; if (files && files.length > 0) { useStore.getState().importFiles(files); }
-  }, []);
   const handleZoomIn = useCallback(() => { setZoom(Math.min(zoom + 25, 200)); }, [zoom, setZoom]);
   const handleZoomOut = useCallback(() => { setZoom(Math.max(zoom - 25, 25)); }, [zoom, setZoom]);
 
@@ -33,32 +28,33 @@ export function TopBar() {
 
         {/* 操作按钮 */}
         <div className="flex items-center gap-1">
-          <button onClick={handleImportClick} className="deck-btn-ghost flex items-center gap-1.5" title="导入文件">
-            <Upload className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">导入</span>
-          </button>
-          <input ref={fileInputRef} type="file" accept=".html,.htm,.zip" multiple className="sr-only" onChange={handleFileChange} />
-          <button
-            onClick={() => setShowRepositoryModal(true)}
-            className={`deck-btn-ghost flex items-center gap-1.5 ${repository.binding ? 'deck-btn-ghost-active' : ''}`}
-            title={repository.binding ? `已连接 ${repository.binding.owner}/${repository.binding.repo}` : '绑定 GitHub PPT 仓库'}
-          >
-            <GitFork className="w-3.5 h-3.5" />
-            <span className="hidden md:inline max-w-28 truncate">
-              {repository.binding ? repository.binding.repo : 'PPT 仓库'}
-            </span>
-          </button>
+          {hasImported ? (
+            <button onClick={() => void closeDocument()} className="deck-btn-ghost flex items-center gap-1.5" title="关闭当前文档，返回主页（自动保留草稿）">
+              <X className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">关闭</span>
+            </button>
+          ) : (
+            <button onClick={() => void importPickedFiles()} className="deck-btn-ghost flex items-center gap-1.5" title="导入 HTML 文件">
+              <Upload className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">导入</span>
+            </button>
+          )}
 
           {hasImported && (
             <>
               <div className="deck-divider-v" />
               <button
-                onClick={() => setEditMode(!isEditMode)}
-                className={`deck-btn-ghost flex items-center gap-1.5 w-[88px] justify-center ${isEditMode ? 'deck-btn-ghost-active' : ''}`}
-                title={isEditMode ? '退出编辑' : '进入编辑'}
+                onClick={() => {
+                  const next = !isEditMode;
+                  setEditMode(next);
+                  // 退出编辑时自动保存到本地文件
+                  if (!next) void saveToFile();
+                }}
+                className={`deck-btn-ghost flex items-center gap-1.5 whitespace-nowrap ${isEditMode ? 'deck-btn-ghost-active' : ''}`}
+                title={isEditMode ? '退出编辑并保存' : '进入编辑模式'}
               >
-                {isEditMode ? <Edit3 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                <span className="hidden sm:inline">{isEditMode ? '编辑中' : '预览'}</span>
+                {isEditMode ? <Eye className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{isEditMode ? '退出编辑' : '进入编辑'}</span>
               </button>
               <button
                 onClick={() => {
@@ -89,38 +85,28 @@ export function TopBar() {
               <button
                 onClick={() => void saveToFile()}
                 className="deck-btn-ghost flex items-center gap-1.5"
-                title={repository.currentFile ? `保存原文件并提交：${repository.currentFile.path}` : '绑定仓库并从仓库打开 PPT 后保存'}
-                disabled={repository.isLoading}
+                title="保存到本地原文件（导入时选择了文件则直接写回）"
               >
                 <Save className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">提交保存</span>
-              </button>
-              <button onClick={() => void exportZip()} className="deck-btn-ghost flex items-center gap-1.5" title="导出 ZIP">
-                <FileArchive className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">ZIP</span>
-              </button>
-              <button onClick={() => void exportSingleHtml()} className="deck-btn-ghost flex items-center gap-1.5" title="导出单 HTML">
-                <FileCode className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">单 HTML</span>
+                <span className="hidden sm:inline">保存</span>
               </button>
               <IconButton icon={RotateCcw} title="恢复原始" onClick={() => { restoreOriginal(); addToast('已恢复', 'warning'); }} />
               <div className="deck-divider-v" />
-              <IconButton icon={Undo2} title="撤销" onClick={undo} disabled={undoStack.length === 0} />
-              <IconButton icon={Redo2} title="重做" onClick={redo} disabled={redoStack.length === 0} />
+              <IconButton icon={Undo2} title="撤销 (Ctrl+Z)" onClick={undo} disabled={undoCount === 0} />
+              <IconButton icon={Redo2} title="重做 (Ctrl+Shift+Z)" onClick={redo} disabled={redoCount === 0} />
             </>
           )}
         </div>
 
-        {/* 缩放控制 — 绝对居中 */}
-        {hasImported && (
-          <div className="absolute left-1/2 -translate-x-1/2 hidden 2xl:flex items-center gap-1">
-            <IconButton icon={Minus} title="缩小" onClick={handleZoomOut} size="sm" />
-            <span className="text-[11px] text-deck-text2 w-10 text-center tabular-nums">{zoom}%</span>
-            <IconButton icon={Plus} title="放大" onClick={handleZoomIn} size="sm" />
-          </div>
-        )}
-
+        {/* 缩放控制放在右侧常规流中，避免绝对居中时与左侧按钮重叠 */}
         <div className="flex items-center gap-1 ml-auto">
+          {hasImported && (
+            <div className="flex items-center gap-1 mr-2">
+              <IconButton icon={Minus} title="缩小" onClick={handleZoomOut} size="sm" />
+              <span className="text-[11px] text-deck-text2 w-10 text-center tabular-nums">{zoom}%</span>
+              <IconButton icon={Plus} title="放大" onClick={handleZoomIn} size="sm" />
+            </div>
+          )}
           <IconButton
             icon={theme === 'dark' ? Sun : Moon}
             title={theme === 'dark' ? '切换到浅色界面' : '切换到深色界面'}

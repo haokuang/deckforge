@@ -1,26 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, Key, Bot, ChevronDown, Sparkles, Shield, Server, Settings, Eye, EyeOff } from 'lucide-react';
+import { X, Save, Bot, PlugZap, Loader2, Settings } from 'lucide-react';
 import { useStore } from '../../store';
-import { AI_PROVIDERS } from '../../utils/constants';
-import { Switch } from './Switch';
 import { IconButton } from './IconButton';
 
 export function SettingsModal() {
-  const { showSettings, setShowSettings, aiSettings, setAISettings } = useStore();
-  const [localSettings, setLocalSettings] = useState(aiSettings);
+  const { showSettings, setShowSettings, agentSettings, setAgentSettings } = useStore();
+  const [agentUrl, setAgentUrl] = useState(agentSettings.serverUrl);
+  const [testing, setTesting] = useState(false);
+  const [connResult, setConnResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [visible, setVisible] = useState(false);
-  const [showKey, setShowKey] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (showSettings) {
-      setLocalSettings(aiSettings);
-      setShowKey(false);
+      setAgentUrl(agentSettings.serverUrl);
+      setConnResult(null);
       const timer = setTimeout(() => setVisible(true), 10);
       return () => clearTimeout(timer);
     }
     setVisible(false);
-  }, [showSettings, aiSettings]);
+  }, [showSettings, agentSettings.serverUrl]);
 
   // 焦点陷阱
   useEffect(() => {
@@ -57,17 +56,23 @@ export function SettingsModal() {
 
   if (!showSettings) return null;
 
-  const handleSave = () => { setAISettings(localSettings); setShowSettings(false); };
-  const provider = AI_PROVIDERS.find((p) => p.value === localSettings.provider);
+  const handleSave = () => {
+    setAgentSettings({ serverUrl: agentUrl.trim() || 'http://127.0.0.1:8787' });
+    setShowSettings(false);
+  };
 
-  const handleProviderChange = (value: string) => {
-    const p = AI_PROVIDERS.find((item) => item.value === value);
-    setLocalSettings((s) => ({
-      ...s,
-      provider: value as typeof s.provider,
-      apiUrl: p?.value === 'custom' ? s.apiUrl : (p?.defaultUrl || s.apiUrl),
-      model: p?.defaultModel || s.model,
-    }));
+  const handleTestAgent = async () => {
+    setTesting(true);
+    setConnResult(null);
+    try {
+      setAgentSettings({ serverUrl: agentUrl.trim() || 'http://127.0.0.1:8787' });
+      const message = await useStore.getState().testAgentConnection();
+      setConnResult({ ok: true, text: message });
+    } catch (err) {
+      setConnResult({ ok: false, text: err instanceof Error ? err.message : '连接失败' });
+    } finally {
+      setTesting(false);
+    }
   };
 
   return (
@@ -91,121 +96,43 @@ export function SettingsModal() {
               </div>
               <div>
                 <h2 id="settings-title" className="text-[15px] font-semibold text-deck-text tracking-tight">设置</h2>
-                <p className="text-[11px] text-deck-text3 mt-0.5">配置 AI 智能适配与连接参数</p>
+                <p className="text-[11px] text-deck-text3 mt-0.5">配置本地 Codex Agent 桥接</p>
               </div>
             </div>
             <IconButton icon={X} title="关闭" onClick={() => setShowSettings(false)} />
           </div>
 
           <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto deck-scroll">
-            <div className="deck-glass-thin p-4 rounded-2xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${localSettings.enabled ? 'bg-deck-accent/15 border-deck-accent/20' : 'bg-deck-fill border-deck-border'} border`}>
-                    <Sparkles className={`w-[18px] h-[18px] transition-colors duration-300 ${localSettings.enabled ? 'text-deck-accent' : 'text-deck-text3'}`} />
-                  </div>
-                  <div>
-                    <span className="text-[13px] font-medium text-deck-text block">启用 AI 智能适配</span>
-                    <span className="text-[11px] text-deck-text3 block mt-0.5">选中元素后可调用 AI 进行智能转换</span>
-                  </div>
-                </div>
-                <Switch
-                  checked={localSettings.enabled}
-                  onChange={(checked) => setLocalSettings((s) => ({ ...s, enabled: checked }))}
+            <div className="deck-glass-thin p-4 rounded-2xl space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <Bot className="w-3.5 h-3.5 text-deck-accent" />
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-deck-text3">Codex Agent 桥接</span>
+              </div>
+              <div>
+                <label className="deck-label mb-2.5 block">桥接服务地址</label>
+                <input
+                  type="text"
+                  value={agentUrl}
+                  onChange={(e) => setAgentUrl(e.target.value)}
+                  placeholder="http://127.0.0.1:8787"
+                  className="deck-input w-full font-mono text-[12px]"
                 />
               </div>
-            </div>
-
-            <div className={`space-y-3 transition-all duration-300 ${localSettings.enabled ? 'opacity-100 pointer-events-auto' : 'opacity-35 pointer-events-none'}`}>
-              <div className="flex items-center gap-2 px-1">
-                <Server className="w-3.5 h-3.5 text-deck-text3" />
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-deck-text3">连接配置</span>
-              </div>
-
-              <div className="deck-glass-thin p-4 rounded-2xl space-y-4">
-                <div>
-                  <label className="deck-label mb-2.5 block">AI 提供商</label>
-                  <div className="relative">
-                    <select
-                      value={localSettings.provider}
-                      onChange={(e) => handleProviderChange(e.target.value)}
-                      className="deck-input w-full appearance-none cursor-pointer pr-10"
-                      disabled={!localSettings.enabled}
-                    >
-                      {AI_PROVIDERS.map((p) => (
-                        <option key={p.value} value={p.value}>{p.label}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-deck-text3 pointer-events-none" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="deck-label mb-2.5 block">模型</label>
-                  <input
-                    type="text"
-                    value={localSettings.model || provider?.defaultModel || ''}
-                    onChange={(e) => setLocalSettings((s) => ({ ...s, model: e.target.value }))}
-                    className="deck-input w-full"
-                    disabled={!localSettings.enabled}
-                    placeholder="例如 gpt-4o"
-                  />
-                  {provider && provider.value !== 'custom' && (
-                    <p className="text-[10px] text-deck-text3 mt-1.5">默认: {provider.defaultModel}</p>
-                  )}
-                </div>
-
-                {localSettings.provider === 'custom' && (
-                  <div>
-                    <label className="deck-label mb-2.5 block">API 地址</label>
-                    <input
-                      type="text"
-                      value={localSettings.apiUrl || ''}
-                      onChange={(e) => setLocalSettings((s) => ({ ...s, apiUrl: e.target.value }))}
-                      className="deck-input w-full"
-                      disabled={!localSettings.enabled}
-                      placeholder="https://api.example.com/v1/chat/completions"
-                    />
-                  </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleTestAgent()}
+                  disabled={testing}
+                  className="deck-btn-glass px-4 py-1.5 text-[12px] flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlugZap className="w-3.5 h-3.5" />}
+                  <span>测试连接</span>
+                </button>
+                {connResult && (
+                  <span className={`text-[11px] ${connResult.ok ? 'text-emerald-400' : 'text-red-400'}`}>{connResult.text}</span>
                 )}
               </div>
-            </div>
-
-            <div className={`space-y-3 transition-all duration-300 ${localSettings.enabled ? 'opacity-100 pointer-events-auto' : 'opacity-35 pointer-events-none'}`}>
-              <div className="flex items-center gap-2 px-1">
-                <Shield className="w-3.5 h-3.5 text-deck-text3" />
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-deck-text3">安全认证</span>
-              </div>
-
-              <div className="deck-glass-thin p-4 rounded-2xl">
-                <label className="deck-label mb-2.5 block">API Key</label>
-                <div className="relative">
-                  <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-deck-text3" />
-                  <input
-                    type={showKey ? 'text' : 'password'}
-                    value={localSettings.apiKey}
-                    onChange={(e) => setLocalSettings((s) => ({ ...s, apiKey: e.target.value }))}
-                    placeholder="sk-..."
-                    className="deck-input w-full pl-10 pr-10"
-                    disabled={!localSettings.enabled}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKey((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-deck-text3 hover:text-deck-text2 transition-colors"
-                    aria-label={showKey ? '隐藏 API Key' : '显示 API Key'}
-                    title={showKey ? '隐藏' : '显示'}
-                  >
-                    {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <div className="flex items-start gap-2 mt-3">
-                  <div className="w-4 h-4 rounded flex items-center justify-center bg-deck-accent2/10 mt-0.5 shrink-0">
-                    <Bot className="w-2.5 h-2.5 text-deck-accent2" />
-                  </div>
-                  <p className="text-[11px] text-deck-text3 leading-relaxed">API Key 仅存储在本地浏览器中，不会发送到任何第三方服务器。所有 AI 请求直接从您的浏览器发出。</p>
-                </div>
-              </div>
+              <p className="text-[11px] text-deck-text3 leading-relaxed">在本机运行 <code className="px-1 rounded bg-deck-fill font-mono">npm run agent</code> 启动桥接服务后，AI 面板即可让本机 Codex 直接修改当前页。Agent 编辑期间对应页面会临时锁定。</p>
             </div>
           </div>
 

@@ -19,22 +19,22 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourname/deckforge.git"
+    "url": "https://github.com/haokuang/deckforge.git"
   },
   "bugs": {
-    "url": "https://github.com/yourname/deckforge/issues"
+    "url": "https://github.com/haokuang/deckforge/issues"
   },
-  "homepage": "https://github.com/yourname/deckforge#readme",
+  "homepage": "https://github.com/haokuang/deckforge#readme",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "agent": "node agent-bridge/server.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
     "framer-motion": "^12.42.0",
-    "jszip": "^3.10.1",
     "lucide-react": "^1.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

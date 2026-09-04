@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useEffect } from 'react'
 import { useStore } from './store'
 import { TopBar } from './components/layout/TopBar'
 import { LeftPanel } from './components/layout/LeftPanel'
@@ -7,11 +7,14 @@ import { RightPanel } from './components/layout/RightPanel'
 import { FileDropZone } from './components/importer/FileDropZone'
 import { ToastContainer } from './components/ui/ToastContainer'
 import { SettingsModal } from './components/ui/SettingsModal'
-import { RepositoryModal } from './components/ui/RepositoryModal'
 
 function App() {
   const hasImported = useStore((s) => s.hasImported)
   const theme = useStore((s) => s.theme)
+
+  useEffect(() => {
+    void useStore.getState().loadDraftInfo()
+  }, [])
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -35,7 +38,6 @@ function App() {
 
       <ToastContainer />
       <SettingsModal />
-      <RepositoryModal />
     </div>
   )
 }

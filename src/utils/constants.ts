@@ -2,20 +2,20 @@
 
 import type { FontOption, ColorPreset } from '../types';
 
-/** 字体选项 */
+/** 字体选项（stack：中英文都能命中的跨平台字体栈） */
 export const FONT_OPTIONS: FontOption[] = [
-  { value: 'Inter', label: 'Inter', category: 'sans' },
-  { value: 'SF Pro Display', label: 'SF Pro', category: 'sans' },
-  { value: 'Microsoft YaHei', label: '微软雅黑', category: 'sans' },
-  { value: 'PingFang SC', label: '苹方', category: 'sans' },
-  { value: 'Noto Sans SC', label: '思源黑体', category: 'sans' },
-  { value: 'SimSun', label: '宋体', category: 'serif' },
-  { value: 'KaiTi', label: '楷体', category: 'serif' },
-  { value: 'FangSong', label: '仿宋', category: 'serif' },
-  { value: 'Arial', label: 'Arial', category: 'sans' },
-  { value: 'Georgia', label: 'Georgia', category: 'serif' },
-  { value: 'Courier New', label: 'Courier New', category: 'mono' },
-  { value: 'Impact', label: 'Impact', category: 'display' },
+  { value: 'Inter', label: 'Inter', category: 'sans', stack: "Inter, 'PingFang SC', 'Microsoft YaHei', sans-serif" },
+  { value: 'SF Pro Display', label: 'SF Pro', category: 'sans', stack: "'SF Pro Display', 'PingFang SC', 'Microsoft YaHei', sans-serif" },
+  { value: 'PingFang SC', label: '苹方', category: 'sans', stack: "'PingFang SC', 'Microsoft YaHei', sans-serif" },
+  { value: 'Microsoft YaHei', label: '微软雅黑', category: 'sans', stack: "'Microsoft YaHei', 'PingFang SC', sans-serif" },
+  { value: 'Noto Sans SC', label: '思源黑体', category: 'sans', stack: "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif" },
+  { value: 'Songti SC', label: '宋体', category: 'serif', stack: "'Songti SC', SimSun, serif" },
+  { value: 'Kaiti SC', label: '楷体', category: 'serif', stack: "'Kaiti SC', STKaiti, KaiTi, serif" },
+  { value: 'FangSong', label: '仿宋', category: 'serif', stack: "'FangSong', 'Songti SC', serif" },
+  { value: 'Arial', label: 'Arial', category: 'sans', stack: "Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" },
+  { value: 'Georgia', label: 'Georgia', category: 'serif', stack: "Georgia, 'Songti SC', SimSun, serif" },
+  { value: 'Courier New', label: 'Courier New', category: 'mono', stack: "'Courier New', 'PingFang SC', monospace" },
+  { value: 'Impact', label: 'Impact', category: 'display', stack: "Impact, 'PingFang SC', sans-serif" },
 ];
 
 /** 文字颜色预设 */
@@ -87,24 +87,6 @@ export const SHADOW_PRESETS = [
   { value: '0 10px 15px rgba(0,0,0,0.1)', label: '中等' },
   { value: '0 20px 25px rgba(0,0,0,0.15)', label: '强烈' },
   { value: '0 25px 50px rgba(0,0,0,0.25)', label: '投影' },
-];
-
-/** AI 提供商配置 */
-export const AI_PROVIDERS = [
-  { value: 'openai', label: 'OpenAI', defaultUrl: 'https://api.openai.com/v1/chat/completions', defaultModel: 'gpt-4o' },
-  { value: 'claude', label: 'Claude', defaultUrl: 'https://api.anthropic.com/v1/messages', defaultModel: 'claude-3-5-sonnet-20241022' },
-  { value: 'qianwen', label: '通义千问', defaultUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', defaultModel: 'qwen-max' },
-  { value: 'kimi', label: 'Kimi', defaultUrl: 'https://api.moonshot.cn/v1/chat/completions', defaultModel: 'moonshot-v1-8k' },
-  { value: 'custom', label: '自定义', defaultUrl: '', defaultModel: '' },
-];
-
-/** AI 适配模板 */
-export const AI_ADAPTER_TEMPLATES = [
-  { id: 'to-table', label: '转成可编辑表格', prompt: '将这个 HTML 元素转换成一个语义化、可编辑的 HTML 表格，保留原有数据内容和样式。只返回表格的 HTML 代码，不要包含解释。' },
-  { id: 'optimize-text', label: '优化排版', prompt: '优化这个 HTML 元素的文本排版，包括行高、间距、对齐等，使其更易读更美观。只返回优化后的 HTML 代码，不要包含解释。' },
-  { id: 'extract-text', label: '提取文字', prompt: '从这个 HTML 元素中提取纯文本内容，保持原有段落结构。只返回文本内容。' },
-  { id: 'simplify', label: '简化结构', prompt: '简化这个 HTML 元素的结构，去除不必要的嵌套和样式，保留核心内容和基本样式。只返回简化后的 HTML 代码。' },
-  { id: 'to-responsive', label: '响应式适配', prompt: '将这个 HTML 元素转换为响应式布局，使其在不同屏幕尺寸下都能正常显示。使用现代 CSS 特性。只返回 HTML 代码。' },
 ];
 
 /** Slide 识别选择器 */

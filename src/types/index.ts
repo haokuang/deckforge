@@ -10,6 +10,8 @@ export interface FileNode {
   mimeType?: string;
   children?: FileNode[];
   isMainHtml?: boolean;
+  /** 通过 File System Access API 导入时可写回原文件的句柄 */
+  fileHandle?: FileSystemFileHandle;
 }
 
 /** 页面信息 */
@@ -19,11 +21,10 @@ export interface PageInfo {
   title: string;
   type: 'slide' | 'chapter' | 'cover' | 'transition' | 'data' | 'unknown';
   selector: string;
-  thumbnail?: string;
   element?: HTMLElement;
 }
 
-/** 编辑动作（用于撤销重做） */
+/** 编辑动作（用于撤销重做）——历史现由 iframe 桥内快照管理，保留类型供序列化使用 */
 export interface EditAction {
   id: string;
   type: 'style' | 'text' | 'replace' | 'delete' | 'add';
@@ -32,6 +33,13 @@ export interface EditAction {
   oldValue: string | null;
   newValue: string | null;
   timestamp: number;
+}
+
+/** 桥内幻灯片元数据（DECKFORGE_SLIDES_CHANGED 消息） */
+export interface SlideMeta {
+  index: number;
+  title?: string;
+  type: string;
 }
 
 /** 选中元素信息 */
@@ -43,6 +51,7 @@ export interface SelectedElementInfo {
   isImage: boolean;
   computedStyles: ComputedStyleMap;
   rect: DOMRect;
+  selectionCount?: number;
 }
 
 /** 计算样式映射 */
@@ -66,39 +75,29 @@ export interface ComputedStyleMap {
   [key: string]: string | undefined;
 }
 
-/** AI 适配设置 */
-export interface AIAdapterSettings {
-  provider: 'openai' | 'claude' | 'qianwen' | 'kimi' | 'custom';
-  apiKey: string;
-  apiUrl?: string;
-  model?: string;
-  enabled: boolean;
+/** 本地 Codex Agent 桥接设置 */
+export interface AgentBridgeSettings {
+  /** 本地 agent-bridge 服务地址，例如 http://127.0.0.1:8787 */
+  serverUrl: string;
 }
 
-/** GitHub PPT 仓库连接信息。Token 仅保存在当前页面内存中。 */
-export interface GitHubRepositoryBinding {
-  owner: string;
-  repo: string;
-  branch: string;
-  folder: string;
-  token: string;
+/** Agent 任务状态。running 期间对应页面处于锁定状态。 */
+export interface AgentTaskState {
+  status: 'idle' | 'running';
+  pageIndex: number;
+  instruction: string;
+  startedAt: number;
+  /** 上一次失败的错误信息，供面板展示 */
+  error?: string;
 }
 
-/** GitHub 仓库中的单个 HTML 演示稿。 */
-export interface RepositoryHtmlFile {
-  name: string;
-  path: string;
-  sha: string;
-  size: number;
-}
-
-/** GitHub 仓库工作区状态。 */
-export interface RepositoryState {
-  binding: GitHubRepositoryBinding | null;
-  files: RepositoryHtmlFile[];
-  currentFile: RepositoryHtmlFile | null;
-  isLoading: boolean;
-  lastCommitUrl?: string;
+/** 最近一次 Agent 修改记录，用于一键撤销 */
+export interface AgentEditRecord {
+  pageIndex: number;
+  pageTitle: string;
+  instruction: string;
+  baselineHtml: string;
+  timestamp: number;
 }
 
 export type ThemeMode = 'dark' | 'light';
@@ -121,12 +120,9 @@ export interface ToastMessage {
   duration?: number;
 }
 
-/** 编辑器状态 */
-export interface EditorState {
-  isEditMode: boolean;
-  zoom: number;
-  showGrid: boolean;
-  snapToGrid: boolean;
+/** 本地草稿元信息（IndexedDB 自动保存） */
+export interface DraftInfo {
+  savedAt: number;
 }
 
 /** 应用整体状态 */
@@ -135,24 +131,24 @@ export interface AppState {
   fileTree: FileNode[];
   originalFileTree: FileNode[];
   currentFile: string | null;
-  
+
   // 页面
   pages: PageInfo[];
   currentPageIndex: number;
-  
+
   // 编辑
   isEditMode: boolean;
   selectedElement: SelectedElementInfo | null;
   zoom: number;
-  undoStack: EditAction[];
-  redoStack: EditAction[];
-  
+  /** 撤销/重做可用步数（由 iframe 桥内快照历史回传） */
+  undoCount: number;
+  redoCount: number;
+  /** 当前多选元素数量（含主选中） */
+  selectionCount: number;
+
   // 导入
   importState: ImportState;
-  
-  // 设置
-  aiSettings: AIAdapterSettings;
-  
+
   // UI
   toasts: ToastMessage[];
   leftPanelCollapsed: boolean;
@@ -160,15 +156,24 @@ export interface AppState {
   showSettings: boolean;
   theme: ThemeMode;
 
-  // GitHub PPT 仓库
-  repository: RepositoryState;
-  showRepositoryModal: boolean;
-  
+  // 本地 Codex Agent
+  agentSettings: AgentBridgeSettings;
+  agentTask: AgentTaskState;
+  lastAgentEdit: AgentEditRecord | null;
+
+  // 本地草稿
+  draftInfo: DraftInfo | null;
+
   // 是否已导入文件
   hasImported: boolean;
-  
+
+  // 仅在需要整页重载 iframe 时递增（导入/恢复原状/仓库打开/恢复草稿）；
+  // 自动保存只更新 fileTree 内容，不应触发重载，否则会形成 重载→自动保存→重载 死循环
+  reloadToken: number;
+
   // iframe 引用
   iframeWindow: Window | null;
+  iframeEl: HTMLIFrameElement | null;
 
   // 格式刷
   formatPainterSource: SelectedElementInfo | null;
@@ -181,6 +186,8 @@ export interface FontOption {
   value: string;
   label: string;
   category: 'sans' | 'serif' | 'mono' | 'display';
+  /** 实际应用的完整字体栈（跨平台回退），缺省时用 value */
+  stack?: string;
 }
 
 /** 颜色预设 */

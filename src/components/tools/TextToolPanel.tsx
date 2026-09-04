@@ -93,8 +93,11 @@ export function TextToolPanel() {
           <div>
             <label className="deck-label mb-2 block">字体</label>
             <select
-              value={styles.fontFamily?.split(',')[0] || 'Inter'}
-              onChange={(e) => handleStyleChange('fontFamily', e.target.value)}
+              value={(styles.fontFamily || 'Inter').split(',')[0]?.replace(/['"]/g, '').trim() || 'Inter'}
+              onChange={(e) => {
+                const f = FONT_OPTIONS.find((o) => o.value === e.target.value);
+                handleStyleChange('fontFamily', f?.stack || e.target.value);
+              }}
               className="deck-input w-full"
             >
               {FONT_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}

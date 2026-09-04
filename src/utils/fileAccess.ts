@@ -3,62 +3,11 @@
  * 提供浏览器本地文件系统访问能力
  */
 
-import type { FileNode } from '../types';
-
 /**
  * 检查浏览器是否支持 File System Access API
  */
 export function supportsFileSystemAccess(): boolean {
   return 'showOpenFilePicker' in window && 'showDirectoryPicker' in window;
-}
-
-/**
- * 使用 File System Access API 选择文件夹
- */
-export async function pickDirectory(): Promise<FileSystemDirectoryHandle> {
-  if (!supportsFileSystemAccess()) {
-    throw new Error('浏览器不支持 File System Access API');
-  }
-  return await (window as any).showDirectoryPicker();
-}
-
-/**
- * 递归读取文件夹内容
- */
-export async function readDirectoryRecursively(
-  dirHandle: FileSystemDirectoryHandle,
-  path = ''
-): Promise<FileNode[]> {
-  const nodes: FileNode[] = [];
-
-  for await (const [name, handle] of (dirHandle as any).entries()) {
-    const currentPath = path ? `${path}/${name}` : name;
-
-    if (handle.kind === 'directory') {
-      const children = await readDirectoryRecursively(handle, currentPath);
-      nodes.push({
-        id: crypto.randomUUID(),
-        name,
-        path: currentPath,
-        type: 'directory',
-        children,
-      });
-      nodes.push(...children);
-    } else {
-      const file = await handle.getFile();
-      nodes.push({
-        id: crypto.randomUUID(),
-        name,
-        path: currentPath,
-        type: 'file',
-        content: await file.arrayBuffer(),
-        mimeType: file.type || guessMimeType(name),
-        isMainHtml: name.toLowerCase() === 'index.html' || name.toLowerCase() === 'main.html',
-      });
-    }
-  }
-
-  return nodes;
 }
 
 /**
@@ -86,10 +35,6 @@ export async function saveFileToDisk(
       {
         description: 'HTML Files',
         accept: { 'text/html': ['.html', '.htm'] },
-      },
-      {
-        description: 'ZIP Files',
-        accept: { 'application/zip': ['.zip'] },
       },
     ],
   });

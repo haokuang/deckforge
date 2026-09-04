@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState } from 'react';
+import { Bot } from 'lucide-react';
 import { useStore } from '../../store';
 import { injectEditorBridge } from '../../utils/dom';
+import type { SlideMeta } from '../../types';
 
 const DEFAULT_SLIDE_WIDTH = 1920;
 const DEFAULT_SLIDE_HEIGHT = 1080;
@@ -10,13 +12,18 @@ export function PreviewArea() {
   const containerRef = useRef<HTMLDivElement>(null);
   const blobUrlRef = useRef<string | null>(null);
   const loadedRef = useRef(false);
-  const { zoom, isEditMode, currentPageIndex, pages, hasImported, fileTree, currentFile, selectElement, formatPainterActive, formatPainterSource, applyFormatPainter, clearFormatPainter, setZoom } = useStore();
+  const { zoom, isEditMode, currentPageIndex, pages, hasImported, currentFile, selectElement, formatPainterActive, formatPainterSource, applyFormatPainter, clearFormatPainter, setZoom } = useStore();
+  const agentTask = useStore((s) => s.agentTask);
+  // 仅在导入/恢复原状/仓库打开/恢复草稿时变化；自动保存更新的 fileTree 不应重载 iframe
+  const reloadToken = useStore((s) => s.reloadToken);
+  const agentStatus = agentTask.status === 'running' ? `AI 正在编辑第 ${agentTask.pageIndex + 1} 页…` : null;
   const [iframeSize, setIframeSize] = useState({ width: DEFAULT_SLIDE_WIDTH, height: DEFAULT_SLIDE_HEIGHT });
 
-  // 只在文件/内容变化时加载 iframe，不依赖页面索引和编辑模式
+  // 只在导入/切换文件/显式重载时加载 iframe；fileTree 内容更新（自动保存、保存写回）不触发重载
   useEffect(() => {
     if (!iframeRef.current || !hasImported || !currentFile) return;
     const iframe = iframeRef.current;
+    const fileTree = useStore.getState().fileTree;
     const htmlNode = fileTree.find((n) => n.path === currentFile);
     if (!htmlNode || !htmlNode.content) return;
 
@@ -37,6 +44,7 @@ export function PreviewArea() {
       injectEditorBridge(iframe);
       if (iframe.contentWindow) {
         useStore.getState().setIframeWindow(iframe.contentWindow);
+        useStore.getState().setIframeEl(iframe);
         loadedRef.current = true;
         const state = useStore.getState();
         iframe.contentWindow.postMessage({ type: 'DECKFORGE_SET_EDIT_MODE', enabled: state.isEditMode }, '*');
@@ -66,12 +74,13 @@ export function PreviewArea() {
 
     return () => {
       loadedRef.current = false;
+      useStore.getState().setIframeEl(null);
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current);
         blobUrlRef.current = null;
       }
     };
-  }, [hasImported, currentFile, fileTree, setZoom]);
+  }, [hasImported, currentFile, reloadToken, setZoom]);
 
   // 同步编辑模式到 iframe（仅当 iframe 已加载）
   useEffect(() => {
@@ -93,7 +102,7 @@ export function PreviewArea() {
     const handleMessage = (e: MessageEvent) => {
       if (!e.data || !e.data.type) return;
       if (e.data.type === 'ELEMENT_SELECTED') {
-        const info = { tagName: e.data.tagName, selector: e.data.selector, textContent: e.data.textContent, isTextEditable: e.data.isTextEditable, isImage: e.data.isImage, computedStyles: e.data.computedStyles || {}, rect: e.data.rect || { x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0, toJSON: () => '' } };
+        const info = { tagName: e.data.tagName, selector: e.data.selector, textContent: e.data.textContent, isTextEditable: e.data.isTextEditable, isImage: e.data.isImage, computedStyles: e.data.computedStyles || {}, rect: e.data.rect || { x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0, toJSON: () => '' }, selectionCount: e.data.selectionCount || 1 };
         // 格式刷激活时：先应用格式，再更新选中元素
         if (formatPainterActive && formatPainterSource && formatPainterSource.selector !== info.selector) {
           selectElement(info);
@@ -101,6 +110,19 @@ export function PreviewArea() {
         } else {
           selectElement(info);
         }
+      }
+      if (e.data.type === 'DECKFORGE_SELECTION_CLEARED') {
+        selectElement(null);
+      }
+      if (e.data.type === 'DECKFORGE_HISTORY') {
+        useStore.getState().setHistoryCounts(Number(e.data.undoCount) || 0, Number(e.data.redoCount) || 0);
+      }
+      if (e.data.type === 'DECKFORGE_SLIDES_CHANGED') {
+        const slides = (Array.isArray(e.data.slides) ? e.data.slides : []) as SlideMeta[];
+        useStore.getState().handleSlidesChanged(slides, Number(e.data.current) || 0);
+      }
+      if (e.data.type === 'DECKFORGE_TOAST') {
+        useStore.getState().addToast(String(e.data.message || ''), (e.data.toastType as 'info') || 'info');
       }
     };
     window.addEventListener('message', handleMessage);
@@ -123,7 +145,10 @@ export function PreviewArea() {
       if (isMeta && e.key === 'e') {
         e.preventDefault();
         const state = useStore.getState();
-        state.setEditMode(!state.isEditMode);
+        const next = !state.isEditMode;
+        state.setEditMode(next);
+        // 与顶栏按钮一致：退出编辑时自动保存
+        if (!next) void state.saveToFile();
       }
       if (e.key === 'Escape') {
         if (formatPainterActive) { clearFormatPainter(); }
@@ -152,6 +177,15 @@ export function PreviewArea() {
         <span>页面 {currentPageIndex + 1} / {pages.length}</span>
         <span className="deck-divider-v mx-2" />
         <span>{iframeSize.width} x {iframeSize.height}</span>
+        {agentStatus && (
+          <>
+            <span className="deck-divider-v mx-2" />
+            <span className="flex items-center gap-1.5 text-deck-accent">
+              <Bot className="w-3 h-3 animate-pulse" />
+              {agentStatus}
+            </span>
+          </>
+        )}
       </div>
     </div>
   );

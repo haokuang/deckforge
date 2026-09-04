@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Layers, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, MoveVertical } from 'lucide-react';
+import { Layers, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ChevronsUp, ChevronsDown } from 'lucide-react';
 import { useStore } from '../../store';
 import { Switch } from '../ui/Switch';
 import { NumberInput } from '../ui/NumberInput';
@@ -63,8 +63,8 @@ export function LayoutToolPanel() {
             className="flex-1"
           />
           <div className="flex gap-1">
-            <IconButton icon={MoveVertical} title="层级 +1" onClick={() => handleStyleChange('zIndex', String(zIndex + 1))} size="sm" />
-            <IconButton icon={MoveVertical} title="层级 -1" onClick={() => handleStyleChange('zIndex', String(zIndex - 1))} size="sm" />
+            <IconButton icon={ChevronsUp} title="上移一层 (z-index +1)" onClick={() => handleStyleChange('zIndex', String(zIndex + 1))} size="sm" />
+            <IconButton icon={ChevronsDown} title="下移一层 (z-index -1)" onClick={() => handleStyleChange('zIndex', String(zIndex - 1))} size="sm" />
           </div>
         </div>
       </div>

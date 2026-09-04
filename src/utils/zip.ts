@@ -1,58 +1,4 @@
-import JSZip from 'jszip';
 import type { FileNode } from '../types';
-
-/**
- * 解析 ZIP 文件为虚拟文件树
- */
-export async function parseZip(file: File): Promise<FileNode[]> {
-  const zip = await JSZip.loadAsync(file);
-  const root: FileNode[] = [];
-
-  for (const [path, entry] of Object.entries(zip.files)) {
-    if (entry.dir) continue;
-
-    const parts = path.split('/').filter(Boolean);
-    const name = parts[parts.length - 1];
-
-    const node: FileNode = {
-      id: crypto.randomUUID(),
-      name,
-      path,
-      type: 'file',
-      content: await entry.async('arraybuffer'),
-      mimeType: guessMimeType(name),
-      isMainHtml: name.toLowerCase() === 'index.html' || name.toLowerCase() === 'main.html',
-    };
-
-    if (parts.length === 1) {
-      root.push(node);
-    } else {
-      // 简化处理：扁平化放入 root
-      root.push(node);
-    }
-  }
-
-  return root;
-}
-
-/**
- * 将文件树打包为 ZIP
- */
-export async function createZip(fileTree: FileNode[]): Promise<Blob> {
-  const zip = new JSZip();
-
-  for (const node of fileTree) {
-    if (node.type === 'file' && node.content) {
-      if (typeof node.content === 'string') {
-        zip.file(node.path, node.content);
-      } else {
-        zip.file(node.path, node.content);
-      }
-    }
-  }
-
-  return zip.generateAsync({ type: 'blob' });
-}
 
 /**
  * 猜测 MIME 类型
@@ -67,7 +13,7 @@ function guessMimeType(filename: string): string {
     gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp',
     mp4: 'video/mp4', webm: 'video/webm',
     mp3: 'audio/mpeg', wav: 'audio/wav',
-    pdf: 'application/pdf', zip: 'application/zip',
+    pdf: 'application/pdf',
     ttf: 'font/ttf', woff: 'font/woff', woff2: 'font/woff2',
   };
   return map[ext] || 'application/octet-stream';
@@ -76,7 +22,7 @@ function guessMimeType(filename: string): string {
 /**
  * 从 FileList 构建文件树（单文件导入）
  */
-export function buildFileTreeFromFiles(files: FileList): FileNode[] {
+export function buildFileTreeFromFiles(files: FileList | File[]): FileNode[] {
   return Array.from(files).map((file) => ({
     id: crypto.randomUUID(),
     name: file.name,
