@@ -1403,14 +1403,29 @@ export function createEditorBridgeScript(): string {
         if (e.data.type === 'DECKFORGE_EXPORT_SLIDE') {
           var exportSlide = allSlides[e.data.index];
           var exportHtml = '';
+          var exportSelected = null;
           if (exportSlide) {
-            if (exportSlide === document.body) {
-              var bodyClone = exportSlide.cloneNode(true);
-              var junk = bodyClone.querySelector('#__deckforge-agent-lock, #__deckforge-selection-layer, #__deckforge-context-menu, #__deckforge-rt-toolbar');
-              if (junk) junk.remove();
-              exportHtml = bodyClone.innerHTML;
-            } else {
-              exportHtml = exportSlide.innerHTML;
+            // 把当前选中元素临时打上标记再克隆，让 AI 知道「这里 / 选中的部分」指什么；
+            // 标记与还原是同步的，不会产生可见闪烁。
+            var liveSelected = selectedElement && exportSlide.contains(selectedElement) ? selectedElement : null;
+            if (liveSelected) {
+              liveSelected.setAttribute('data-deckforge-selected', '1');
+              exportSelected = {
+                tag: liveSelected.tagName.toLowerCase(),
+                text: liveSelected.textContent ? String(liveSelected.textContent).trim().substring(0, 60) : '',
+              };
+            }
+            try {
+              if (exportSlide === document.body) {
+                var bodyClone = exportSlide.cloneNode(true);
+                var junk = bodyClone.querySelector('#__deckforge-agent-lock, #__deckforge-selection-layer, #__deckforge-context-menu, #__deckforge-rt-toolbar');
+                if (junk) junk.remove();
+                exportHtml = bodyClone.innerHTML;
+              } else {
+                exportHtml = exportSlide.innerHTML;
+              }
+            } finally {
+              if (liveSelected) liveSelected.removeAttribute('data-deckforge-selected');
             }
           }
           window.parent.postMessage({
@@ -1419,6 +1434,7 @@ export function createEditorBridgeScript(): string {
             html: exportHtml,
             width: exportSlide ? exportSlide.getBoundingClientRect().width : 0,
             height: exportSlide ? exportSlide.getBoundingClientRect().height : 0,
+            selected: exportSelected,
           }, '*');
         }
         if (e.data.type === 'DECKFORGE_REPLACE_SLIDE') {

@@ -792,6 +792,8 @@ export const useStore = create<AppStore>((set, get) => ({
 
       const base = agentSettings.serverUrl.replace(/\/+$/, '');
       agentAbortController = new AbortController();
+      // baseline 存去掉选中标记的干净版本，撤销恢复时不会把标记带进文档
+      const baselineHtml = exported.html.replace(/\s+data-deckforge-selected="[^"]*"/g, '').trim();
       const response = await fetch(`${base}/api/agent/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -803,6 +805,7 @@ export const useStore = create<AppStore>((set, get) => ({
             height: exported.height || undefined,
             pageLabel: `第 ${pageIndex + 1} 页 / 共 ${pages.length} 页`,
             pageTitle: page?.title,
+            selection: exported.selected || undefined,
           },
         }),
         signal: agentAbortController.signal,
@@ -821,7 +824,7 @@ export const useStore = create<AppStore>((set, get) => ({
           pageIndex,
           pageTitle: page?.title || `第 ${pageIndex + 1} 页`,
           instruction: trimmed,
-          baselineHtml: exported.html,
+          baselineHtml,
           timestamp: Date.now(),
         },
       });
@@ -908,7 +911,10 @@ function requestIframeHtml(iframeWindow: Window): Promise<string> {
 }
 
 /** 从预览 iframe 读取指定页的内部 HTML 与画布尺寸（供 Agent 使用）。 */
-function requestIframeSlideHtml(iframeWindow: Window, index: number): Promise<{ html: string; width: number; height: number }> {
+function requestIframeSlideHtml(
+  iframeWindow: Window,
+  index: number,
+): Promise<{ html: string; width: number; height: number; selected: { tag: string; text: string } | null }> {
   return new Promise((resolve, reject) => {
     const requestId = crypto.randomUUID();
     const timeout = window.setTimeout(() => {
@@ -925,6 +931,7 @@ function requestIframeSlideHtml(iframeWindow: Window, index: number): Promise<{ 
         html: typeof event.data.html === 'string' ? event.data.html : '',
         width: Number(event.data.width) || 0,
         height: Number(event.data.height) || 0,
+        selected: event.data.selected ?? null,
       });
     };
 

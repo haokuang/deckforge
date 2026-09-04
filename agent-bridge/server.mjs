@@ -207,6 +207,9 @@ ${instruction}
 ## 页面信息
 ${context?.pageLabel ? `- 页面：${context.pageLabel}` : ''}
 ${context?.pageTitle ? `- 页面标题：${context.pageTitle}` : ''}
+${context?.selection ? `
+## 用户当前选中
+用户在编辑器中选中了一个元素（<${context.selection.tag}>${context.selection.text ? `，内容摘要：「${clip(context.selection.text, 60)}」` : ''}），它已在下方 HTML 中用 data-deckforge-selected="1" 标出。指令里的「这里」「选中的部分」「它」都指这个元素；若指令只说修改局部，就只改它。输出时不要保留此标记属性。` : ''}
 
 ## 当前幻灯片内部 HTML
 \`\`\`html
@@ -398,7 +401,8 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 499, { ok: false, error: '客户端已取消' });
         return;
       }
-      const html = inlineLocalAssets(extractHtml(raw));
+      // 剥掉选中标记（codex 可能原样带出），再把本机素材内嵌为 data URI
+      const html = inlineLocalAssets(extractHtml(raw)).replace(/\s+data-deckforge-selected="[^"]*"/g, '');
       console.log(`[agent] 完成，返回 ${html.length} 字符，过程事件 ${state.events.length} 条`);
       sendJson(res, 200, { ok: true, html, events: state.events });
     } catch (err) {
