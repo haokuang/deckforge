@@ -2,7 +2,7 @@
   <img src="./public/favicon.svg" width="72" alt="DeckForge">
   <h1>DeckForge</h1>
   <p><strong>Zero-backend visual editor for HTML presentations</strong></p>
-  <p>Edit AI-generated HTML slides like PowerPoint. Runs entirely in the browser.</p>
+  <p>Edit AI-generated HTML slides like PowerPoint — with a local AI agent on call. Runs entirely in your browser.</p>
 
   <p>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-34C759?style=flat-square" alt="License"></a>
@@ -19,9 +19,9 @@
 
 - [Overview](#overview)
 - [Features](#features)
-- [Demo](#demo)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
+- [AI Editing with Local Codex](#ai-editing-with-local-codex)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
@@ -35,13 +35,15 @@
 
 ## Overview
 
-DeckForge turns static HTML presentations into editable decks. Instead of editing markup by hand, you interact with slides visually: select elements, edit text, tweak styles, replace images, and export the result.
+DeckForge turns static HTML presentations into editable decks. Instead of editing markup by hand, you interact with slides visually: select elements, edit text, drag and resize on canvas, manage pages, and save everything straight back to the original file.
 
-The application is built as a single-page React app that runs entirely in the browser. Local files are parsed locally with JSZip and the File System Access API. The optional GitHub repository workflow talks directly to the GitHub API and does not use a DeckForge backend.
+The application is a single-page React app that runs entirely in the browser. There is no backend: imported files never leave your machine, edits are autosaved to a local IndexedDB draft, and saving writes to the original HTML file through the browser's File System Access API.
+
+Optionally, you can connect a local OpenAI **Codex CLI** through a tiny localhost bridge and edit slides with natural language — the agent locks the page it is working on so it never clashes with your own edits.
 
 ### Why DeckForge?
 
-Modern AI tools generate high-quality HTML slides, but making small edits afterwards is painful. DeckForge bridges that gap by providing a visual layer on top of existing HTML decks, preserving the original design while enabling fast, local edits.
+Modern AI tools generate high-quality HTML slides, but making small edits afterwards is painful. DeckForge bridges that gap by providing a visual layer on top of existing HTML decks, preserving the original design while enabling fast, local edits — by hand or by agent.
 
 ---
 
@@ -49,32 +51,19 @@ Modern AI tools generate high-quality HTML slides, but making small edits afterw
 
 | Feature | Description |
 | --- | --- |
-| **Visual Editing** | Click to select, double-click to edit text, adjust styles from the right panel. |
-| **Multi-format Import** | Drag and drop single HTML files, ZIP archives, or entire folders. |
-| **Slide Detection** | Automatically recognizes reveal.js, impress.js, fullpage.js, swiper, and native `.slide` / `.page` / `section` structures. |
+| **Visual Editing** | Click to select, double-click to edit text, adjust styles in the right panel. Drag elements on canvas and resize with 8 handles; nudge with arrow keys. |
+| **AI Slide Editing** | Describe a change in natural language; a local Codex CLI agent edits the page through the agent bridge. The target page is temporarily locked during the run, and the last AI edit can be reverted with one click. |
+| **Snapshot Undo / Redo** | Per-slide snapshot history (up to 50 steps) that covers every edit type — styles, text, images, inserts, deletions. |
+| **Slide Management** | Page list panel: add, duplicate, delete, and drag to reorder pages; newly added pages inherit the deck's look. |
+| **Multi-select & Align** | Shift-click to select multiple elements, then align or distribute them (left/center/right, top/middle/bottom, horizontal/vertical distribution). |
+| **Element Insertion** | Insert text boxes, rectangles, circles, and lines anywhere on a page. |
+| **Inline Rich Text** | Floating toolbar for bold/italic/underline, font size, and alignment while editing text. |
 | **Format Painter** | Copy styles from one element and apply them to others, with single-shot and continuous modes. |
-| **Image Replacement** | Replace images inside the presentation without touching the markup. |
-| **Flexible Export** | Commit back to the same GitHub path, export a ZIP bundle, or merge everything into a single HTML file. |
-| **Undo / Redo** | Full history stack for style and content changes. |
-| **Privacy First** | Local imports stay in the browser; repository saves go directly to the GitHub API. |
-| **Versioned Save** | Open HTML decks from a bound GitHub repository, save to the original path, and create a commit automatically. |
-| **Light & Dark Themes** | Switch between the original dark workspace and an ivory light theme; the preference is remembered locally. |
-
----
-
-## Demo
-
-<div align="center">
-  <img src="./public/screenshot-dropzone.png" width="720" alt="DeckForge import screen">
-  <br>
-  <sub>Import screen with drag-and-drop support.</sub>
-</div>
-
-<div align="center">
-  <img src="./public/screenshot-editor.png" width="720" alt="DeckForge editor">
-  <br>
-  <sub>Visual editor with four-panel Liquid Glass layout.</sub>
-</div>
+| **Image Tools** | Replace images, adjust corner radius and shadow, and fine-tune brightness/contrast/saturation. |
+| **Save to Original File** | Saving writes back to the imported HTML file in place via the File System Access API. No export-copy shuffling. |
+| **Autosave Drafts** | Edits are debounced-saved to IndexedDB; the home screen offers one-click draft restore after a refresh or crash. |
+| **Light & Dark Themes** | Switch between the dark workspace and an ivory light theme; the preference is remembered locally. |
+| **Privacy First** | Zero backend. Files, drafts, and AI runs all stay on your machine. |
 
 ---
 
@@ -84,12 +73,13 @@ Modern AI tools generate high-quality HTML slides, but making small edits afterw
 
 - Node.js 20 or later
 - npm 10 or later
+- (Optional, for AI editing) [OpenAI Codex CLI](https://developers.openai.com/codex/cli/) installed and logged in
 
 ### Local Development
 
 ```bash
 # Clone the repository
-git clone https://github.com/ShaneLiu04/deckforge.git
+git clone https://github.com/haokuang/deckforge.git
 cd deckforge
 
 # Install dependencies
@@ -97,6 +87,9 @@ npm install
 
 # Start the development server
 npm run dev
+
+# (Optional) start the local AI agent bridge on 127.0.0.1:8787
+npm run agent
 
 # Build for production
 npm run build
@@ -125,37 +118,44 @@ The Docker image serves the static build via Nginx on port `8080`. Note that bro
 
 ## Usage
 
-### Recommended: bind a PPT repository
-
-Use one GitHub repository (or one folder inside it) for all single-file HTML presentations:
-
-1. Create a fine-grained GitHub token for the repository with **Metadata: Read** and **Contents: Read and write** permissions.
-2. In DeckForge, click **PPT Repository** and enter `owner/repo`, an optional branch/folder, and the token.
-3. Open an HTML file from the repository list.
-4. Edit the deck and click **Commit Save**. DeckForge updates that same repository path and creates a Git commit such as `chore(ppt): update deck.html via DeckForge`.
-
-The token is kept only in the current page's memory and must be entered again after a refresh. Local file/ZIP imports remain available for temporary editing and export, but cannot be committed back to an original path because a normal browser file input does not grant persistent write access.
-
 ### 1. Import a Presentation
 
-Drag an HTML file, ZIP archive, or folder into the central drop zone. DeckForge will scan the content and generate a slide navigator on the left.
+Click **Select HTML** (or drag a file onto the drop zone) to import a single self-contained HTML presentation. DeckForge keeps a write handle to the original file so edits can be saved back to it later.
 
 ### 2. Toggle Edit Mode
 
-Click the **Edit** button in the top bar or press `Ctrl + E`. The preview area becomes interactive.
+Click the **Enter Edit** button in the top bar or press `Ctrl + E`. The preview area becomes interactive; **Exit Edit** saves and returns to the clean preview.
 
 ### 3. Edit Content
 
-- **Select an element** with a single click to view and edit its styles in the right panel.
-- **Edit text** by double-clicking a text element.
-- **Use Format Painter** by selecting a source element, clicking the Format Painter button, then clicking a target element. Hold `Shift` while clicking the button to keep it active across multiple targets.
+- **Select an element** with a single click to edit its styles in the right panel (text, image, layout, effects).
+- **Edit text** by double-clicking a text element; a floating toolbar offers bold/italic/underline, size, and alignment.
+- **Drag and resize** elements directly on the canvas; use arrow keys to nudge, `Delete` to remove, `Ctrl + D` to duplicate.
+- **Right-click** an element for a context menu with copy/paste/duplicate/delete and insertion actions.
+- **Format Painter**: select a source element, click the Format Painter button, then click a target element. Double-click the button to keep it active across multiple targets.
+- **Insert elements**: use the context menu or toolbar to add text boxes, rectangles, circles, and lines.
 
-### 4. Export
+### 4. Manage Slides
 
-- **Save**: download the modified file back to disk.
-- **Export ZIP**: package all assets into a ZIP archive.
-- **Export Single HTML**: inline CSS, JS, and images into one self-contained file.
-- **Restore**: revert all changes to the originally imported state.
+The left panel lists every detected page with its title. Click to switch, drag to reorder, hover for duplicate/delete actions, or use **Add Page** to append a new page styled like the current one.
+
+### 5. Save and Drafts
+
+- **Save** (`Ctrl + S`): writes the current deck back to the original HTML file. If the file was drag-imported without a write handle, DeckForge asks you to point at the original file once; afterwards saving is always silent.
+- **Autosave drafts**: edits are saved to IndexedDB a moment after every change. The home screen detects leftover drafts and offers one-click restore or discard.
+- **Close**: the top-bar Close button returns to the home screen, keeping the draft.
+
+### 6. AI Editing with Local Codex
+
+No cloud, no API keys — the AI panel drives the **Codex CLI installed on your own machine**:
+
+1. Install and authenticate the Codex CLI.
+2. Run `npm run agent` to start the bridge on `http://127.0.0.1:8787` (test the connection in **Settings**).
+3. Open the **AI** panel on the right, describe the change (e.g. "把标题改成红色并居中", "add a footer with today's date"), and run.
+4. The bridge locks the current page, exports its HTML to Codex, applies the returned markup, and unlocks. Other pages stay fully editable while the agent works.
+5. Not happy with the result? One click reverts the entire AI edit via the snapshot history.
+
+The bridge wraps `codex exec --sandbox read-only`, listens only on localhost, and processes one task at a time. Configuration (port, Codex binary, model, timeout) and the HTTP API are documented in [`agent-bridge/README.md`](./agent-bridge/README.md).
 
 ---
 
@@ -163,11 +163,13 @@ Click the **Edit** button in the top bar or press `Ctrl + E`. The preview area b
 
 | Shortcut | Action |
 | --- | --- |
-| `Ctrl + S` | Save file |
-| `Ctrl + Z` | Undo |
-| `Ctrl + Shift + Z` | Redo |
-| `Ctrl + E` | Toggle edit / preview mode |
-| `Esc` | Clear selection or deactivate Format Painter |
+| `Ctrl + S` | Save to the original file |
+| `Ctrl + Z` / `Ctrl + Shift + Z` | Undo / Redo |
+| `Ctrl + E` | Toggle edit / preview mode (exiting also saves) |
+| `Ctrl + C` / `Ctrl + V` / `Ctrl + D` | Copy / paste / duplicate selected element (inside editor) |
+| `Delete` | Delete selected element(s) |
+| `Arrow keys` | Nudge selected element (Shift for larger steps) |
+| `Esc` | Clear selection, deactivate Format Painter, or close menus |
 
 ---
 
@@ -178,9 +180,9 @@ Click the **Edit** button in the top bar or press `Ctrl + E`. The preview area b
 - **Build Tool**: Vite 8
 - **Styling**: Tailwind CSS 4 with a custom Liquid Glass design system
 - **State Management**: Zustand 5
-- **ZIP Handling**: JSZip 3
 - **Icons**: Lucide React
-- **Container**: Nginx on Alpine Linux
+- **AI Bridge**: zero-dependency Node.js HTTP server (`agent-bridge/`)
+- **Container (optional)**: Nginx on Alpine Linux
 
 ---
 
@@ -189,16 +191,19 @@ Click the **Edit** button in the top bar or press `Ctrl + E`. The preview area b
 ```
 deckforge/
 ├── .github/workflows/        # GitHub Actions CI
+├── agent-bridge/             # Local Codex bridge server + docs
+│   ├── server.mjs
+│   └── README.md
 ├── public/                   # Static assets
 ├── src/
 │   ├── components/
-│   │   ├── importer/         # File import components
+│   │   ├── importer/         # Import / draft-restore entry
 │   │   ├── layout/           # TopBar, LeftPanel, PreviewArea, RightPanel
 │   │   ├── tools/            # Text, image, layout, and AI tool panels
 │   │   └── ui/               # Reusable UI primitives
-│   ├── store/                # Zustand global state
+│   ├── store/                # Zustand global state (agent flow, autosave, save)
 │   ├── types/                # TypeScript definitions
-│   ├── utils/                # DOM bridge, ZIP utilities, file access helpers
+│   ├── utils/                # iframe DOM bridge, file access, draft storage
 │   ├── App.tsx
 │   ├── index.css
 │   └── main.tsx
@@ -219,14 +224,13 @@ deckforge/
 
 DeckForge targets modern evergreen browsers:
 
-| Browser | Minimum Version |
-| --- | --- |
-| Chrome | 100+ |
-| Edge | 100+ |
-| Firefox | 100+ |
-| Safari | 15+ |
+| Browser | Minimum Version | Notes |
+| --- | --- | --- |
+| Chrome / Edge | 100+ | Full experience, including saving back to the original file |
+| Firefox | 100+ | Editing works; saving falls back to a browser download |
+| Safari | 15+ | Editing works; saving falls back to a browser download |
 
-Folder import requires the File System Access API, which is best supported in Chromium-based browsers.
+Saving to the original file relies on the File System Access API, which is currently only available in Chromium-based browsers.
 
 ---
 
@@ -246,8 +250,8 @@ The included `Dockerfile` and `docker-compose.yml` produce a production-ready Ng
 
 - [ ] Responsive preview modes for common slide aspect ratios
 - [ ] Built-in theme switcher and color palette presets
-- [ ] Slide reordering and duplication
 - [ ] Bulk find-and-replace across all slides
+- [ ] Support for multi-file deck folders (CSS/JS/images alongside the HTML)
 - [ ] Offline PWA support
 - [ ] Plugin API for custom tool panels
 
