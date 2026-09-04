@@ -117,7 +117,9 @@ function normalizeCodexEvent(evt) {
     case 'web_search':
       return { kind: 'tool', text: clip(item.query || '网页搜索', 500) };
     case 'error':
-      // codex 会把环境警告（如 code-mode 缺失）也作为 error item 发出，但任务仍可成功
+      // codex 会把环境警告（如 code-mode 缺失）也作为 error item 发出，但任务仍可成功。
+      // 「技能描述超预算」是插件/技能较多时必然出现的已知无害提示，模型无法据此行动，过滤避免每次刷屏。
+      if (String(item.message || '').startsWith('Skill descriptions were shortened')) return null;
       return { kind: 'notice', text: clip(item.message || '', 1000) };
     default:
       return null;
