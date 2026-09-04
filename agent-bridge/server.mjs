@@ -75,6 +75,40 @@ function clip(str, max = 4000) {
   return s.length > max ? s.slice(0, max) + `\n…（已截断，共 ${s.length} 字符）` : s;
 }
 
+function guessMime(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const table = {
+    '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif', '.bmp': 'image/bmp',
+    '.ico': 'image/x-icon', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mp3': 'audio/mpeg',
+    '.woff': 'font/woff', '.woff2': 'font/woff2',
+  };
+  return table[ext] || 'application/octet-stream';
+}
+
+// 预览 iframe 以 Blob URL 注入，本机路径（/Users/... 或 file://）无法加载。
+// Codex 返回的 HTML 里若引用了真实存在的本机文件，在这里读取并内嵌为 data URI。
+// 内容不经过模型，避免长 base64 被模型转写出错。超过 5MB 的文件保持原样。
+const MAX_INLINE_BYTES = 5 * 1024 * 1024;
+
+function inlineLocalAssets(html) {
+  return html.replace(/\b(src|href|poster)="([^"]+)"/g, (attr, name, raw) => {
+    let filePath = raw;
+    if (filePath.startsWith('file://')) {
+      try { filePath = decodeURIComponent(new URL(filePath).pathname); } catch { return attr; }
+    }
+    if (!filePath.startsWith('/')) return attr;
+    try {
+      const stat = fs.statSync(filePath);
+      if (!stat.isFile() || stat.size === 0 || stat.size > MAX_INLINE_BYTES) return attr;
+      const data = fs.readFileSync(filePath);
+      return `${name}="data:${guessMime(filePath)};base64,${data.toString('base64')}"`;
+    } catch {
+      return attr;
+    }
+  });
+}
+
 // 展示用：最终回复里的哨兵块对用户没有意义，替换成一句提示
 function prettyAgentText(text) {
   return String(text || '')
@@ -157,6 +191,7 @@ function buildPrompt({ instruction, slideHtml, context }) {
 2. 保持原有技术栈与排版体系：保留已有的 class 命名、内联 style、结构风格；不要引入外部 CSS/JS/字体/CDN 链接；所有 <img> 的 src 原样保留，不要改写、不要内联、不要删除。
 3. 幻灯片画布约为 ${width} x ${height} 像素，调整布局时内容不要超出画布。
 4. 输出的 HTML 必须是合法的、可以直接设置 innerHTML 的片段。
+5. 引用用户本机的图片/SVG/视频等素材时，在 src 中直接写该文件的绝对路径（例如 /Users/xxx/charts/a.svg），系统会自动把它内嵌进页面；不要自己转 base64，不要改写成相对路径。若指令中的路径以相对形式给出且无法确定其位置，在说明中告知用户提供绝对路径。
 
 输出格式（严格遵守）：除了简短说明外，最终回复的末尾必须用下面的哨兵标记包裹唯一的 html 代码块：
 
@@ -363,7 +398,7 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 499, { ok: false, error: '客户端已取消' });
         return;
       }
-      const html = extractHtml(raw);
+      const html = inlineLocalAssets(extractHtml(raw));
       console.log(`[agent] 完成，返回 ${html.length} 字符，过程事件 ${state.events.length} 条`);
       sendJson(res, 200, { ok: true, html, events: state.events });
     } catch (err) {
