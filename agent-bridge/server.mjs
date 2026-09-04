@@ -126,12 +126,15 @@ function extractHtml(text) {
   if (body === null) {
     throw new Error('Codex 返回中没有找到幻灯片 HTML（缺少哨兵标记或 html 代码块）');
   }
+  // 兜底：Codex 可能在哨兵内又包一层 ``` 围栏，若整体被围栏包住则剥掉
+  const fenced = body.match(/^\s*```(?:html)?\s*([\s\S]*?)\s*```\s*$/i);
+  if (fenced) body = fenced[1];
   const html = body.trim();
   if (!html) throw new Error('Codex 返回了空的幻灯片 HTML');
   return html;
 }
 
-function runCodex(prompt) {
+function runCodex(prompt, abortSignal) {
   return new Promise((resolve, reject) => {
     const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'deckforge-agent-'));
     const args = [
@@ -150,8 +153,21 @@ function runCodex(prompt) {
     let stdout = '';
     let stderr = '';
     let settled = false;
+    let timer = null;
 
-    const timer = setTimeout(() => {
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      child.kill('SIGKILL');
+      reject(new Error('任务已取消'));
+    };
+    if (abortSignal) {
+      if (abortSignal.aborted) { onAbort(); return; }
+      abortSignal.addEventListener('abort', onAbort, { once: true });
+    }
+
+    timer = setTimeout(() => {
       if (settled) return;
       settled = true;
       child.kill('SIGKILL');
@@ -164,10 +180,13 @@ function runCodex(prompt) {
     child.stdin.on('error', () => {});
     child.stdin.end(prompt);
 
+    const cleanupSignal = () => { if (abortSignal) abortSignal.removeEventListener('abort', onAbort); };
+
     child.on('error', (err) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      cleanupSignal();
       reject(new Error(err.code === 'ENOENT'
         ? `找不到 ${CODEX_BIN} 命令，请确认已安装 Codex CLI 并在 PATH 中`
         : `无法启动 Codex：${err.message}`));
@@ -177,6 +196,7 @@ function runCodex(prompt) {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      cleanupSignal();
       if (code === 0) {
         resolve(stdout);
       } else {
@@ -209,7 +229,11 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     let aborted = false;
-    req.on('close', () => { aborted = true; });
+    // 注意：Node 16+ 中 req 的 'close' 在请求体读完时就会触发，
+    // 不能用来判断客户端断开；改用 res 的 'close' + writableEnded 判断。
+    res.on('close', () => { if (!res.writableEnded) aborted = true; });
+    const abortController = new AbortController();
+    res.on('close', () => { if (!res.writableEnded) abortController.abort(); });
     try {
       const body = await readBody(req);
       const instruction = typeof body.instruction === 'string' ? body.instruction.trim() : '';
@@ -219,7 +243,7 @@ const server = http.createServer(async (req, res) => {
 
       state.running += 1;
       console.log(`[agent] 收到指令（${slideHtml.length} 字符）：${instruction.slice(0, 80)}`);
-      const raw = await runCodex(buildPrompt({ instruction, slideHtml, context: body.context }));
+      const raw = await runCodex(buildPrompt({ instruction, slideHtml, context: body.context }), abortController.signal);
       if (aborted) {
         sendJson(res, 499, { ok: false, error: '客户端已取消' });
         return;
